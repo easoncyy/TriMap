@@ -1,0 +1,10 @@
+node_modules/
+.next/
+data/
+.env*
+!.env.example
+next-env.d.ts
+*.tsbuildinfo
+desktop.ini
+Thumbs.db
+*.log
