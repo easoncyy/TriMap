@@ -67,6 +67,12 @@ export default function Atlas(){
  const projection=[...optical.nodes,...previewTargets.filter(n=>!optical.nodes.some(o=>o.id===n.id))];
  const visible=(linking?allNodes:projection).filter(n=>(kind==='全部类型'||n.kind===kind)&&(!query||n.id===root||n.id===focus||`${n.title} ${n.summary} ${n.kind}`.toLowerCase().includes(query.toLowerCase()))&&(!expanded||n.id===root||n.id===focus||same.some(e=>e.source===n.id||e.target===n.id)));
  const defaultLayout=balancedLayout(linking?allNodes:projection,linking?allEdges:optical.edges,root);
+ useEffect(()=>{
+  if(!ready||!store||linking||prismMode!=='dispersion'||query||expanded||kind!=='全部类型')return;
+  const missing=projection.filter(n=>!positions[n.id]);
+  if(!missing.length)return;
+  setPositions(previous=>({...previous,...Object.fromEntries(missing.map(n=>[n.id,defaultLayout.prisms[n.id]]))}));
+ },[ready,store,lens,prismMode,linking,query,expanded,kind,positions]);
  const path=optical.path;
  function displayedPosition(n:KnowledgeNode):Point{
   if(linking)return {x:(positions[n.id]?.x??n.x)+['domain','ecology','cognition'].indexOf(n.lens)*1150,y:positions[n.id]?.y??n.y};
@@ -122,7 +128,7 @@ export default function Atlas(){
  async function mutate(body:unknown,message:string){setBusy(true);setError('');try{const r=await fetch('/api/atlas?id='+encodeURIComponent(atlasId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await r.json();if(!r.ok)throw Error(result.error);await refresh();setNotice(message);setModal(null);return true;}catch(e){setError(e instanceof Error?e.message:'操作失败');return false;}finally{setBusy(false);}}
  function navigate(id:string){setDetailOpen(true);const n=allNodes.find(n=>n.id===id);if(!n)return;if(focus!==id)setTrail(t=>[...t,focus].slice(-20));setFocus(id);setLens(n.lens);setExpanded(false);setQuery('');setKind('全部类型');setPanel('detail');setEdgeId(null);}
  function openFeedback(){setDetailOpen(true);setFeedbackTarget('current');setPanel('feedback');}
- function switchLens(next:Lens){setPrismMode('dispersion');setMirrorId(null);setRefractedPositions({});setLens(next);setKind('全部类型');setExpanded(false);setQuery('');setEdgeId(null);if(next!==lens)setLensSweep(n=>n+1);}
+ function switchLens(next:Lens){setPrismMode('dispersion');setMirrorId(null);setLens(next);setKind('全部类型');setExpanded(false);setQuery('');setEdgeId(null);if(next!==lens)setLensSweep(n=>n+1);}
  function exportData(){if(!store)return;const blob=new Blob([JSON.stringify({schemaVersion:1,exportedAt:new Date().toISOString(),...store},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='spectrum-atlas.json';a.click();URL.revokeObjectURL(url);}
  function newNode(){setForm({...emptyForm,id:crypto.randomUUID(),lens,x:200+Math.random()*400,y:100+Math.random()*300});setModal('node');}
  async function saveNode(){if(!graph)return;const normalized={...form,sources:form.sources.map(s=>s.trim()).filter(Boolean)};const nodes=allNodes.some(n=>n.id===form.id)?allNodes.map(n=>n.id===form.id?normalized:n):[...allNodes,normalized];if(await mutate({action:'draft',nodes,relations:allEdges},'已保存为草稿，发布后访客可见')){setFocus(form.id);setLens(form.lens);}}
