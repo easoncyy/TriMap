@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {lightPath,opticalView,reflectedDirection,aimTarget} from '../src/lib/optics.ts';
+import {lightPath,opticalView,reflectedDirection,aimTarget,mirrorAngle} from '../src/lib/optics.ts';
 const n=(id:string,lens:'domain'|'ecology'='domain')=>({id,lens,title:id,kind:'概念',summary:'',body:'',sources:[],status:'待核实' as const,x:0,y:0});
 const nodes=[n('root'),n('a'),n('b'),n('other'),n('cross','ecology'),n('isolated')];
 const e=(id:string,source:string,target:string)=>({id,source,target,label:'关联',reason:'依据'});
@@ -10,3 +10,10 @@ test('refraction retains the upstream path and selected cross-map rays only',()=
 test('unconnected nodes never get invented upstream rays',()=>{assert.equal(lightPath(nodes,edges,'root','isolated'),null);});
 test('cycles do not prevent finding a path',()=>{assert.ok(lightPath(nodes,[...edges,e('cycle','b','root')],'root','cross'));});
 test('mirror angle changes the reflected direction and aim target',()=>{const from={x:0,y:0},mirror={x:100,y:0};const d=reflectedDirection(from,mirror,45);assert.ok(Math.abs(d.x)<1e-9);assert.ok(d.y>0.99);assert.equal(aimTarget(from,mirror,45,[{id:'down',position:{x:100,y:200}},{id:'up',position:{x:100,y:-200}}]),'down');});
+test('automatic mirror angle reflects exactly towards the selected target after moving',()=>{
+ const from={x:20,y:40},target={x:400,y:120};
+ for(const m of [{x:130,y:70},{x:210,y:310},{x:500,y:50}]){
+  const d=reflectedDirection(from,m,mirrorAngle(from,m,target));const dx=target.x-m.x,dy=target.y-m.y,len=Math.hypot(dx,dy);
+  assert.ok(Math.abs(d.x-dx/len)<1e-9);assert.ok(Math.abs(d.y-dy/len)<1e-9);
+ }
+});

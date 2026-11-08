@@ -4,7 +4,17 @@ import {reflectedDirection,type Point} from '@/lib/optics';
 
 // Intersect the center-to-center ray with the measured card boundary.
 // Fixed left/right handles create backwards Bezier loops when cards move.
+function opticalCenter(node:NonNullable<ReturnType<typeof useInternalNode>>){const p=node.internals.positionAbsolute;return node.type==='mirror'?{x:p.x+38,y:p.y+38}:{x:p.x+100,y:p.y+(node.data.lightSource?72:80)};}
 function boundary(node:NonNullable<ReturnType<typeof useInternalNode>>,other:NonNullable<ReturnType<typeof useInternalNode>>){
+ if(node.type==='spectral'||node.type==='mirror'){
+  const c=opticalCenter(node),o=opticalCenter(other),dx=o.x-c.x,dy=o.y-c.y,len=Math.hypot(dx,dy)||1;
+  if(node.type==='mirror'||node.data.lightSource){const radius=node.type==='mirror'?30:25;return {x:c.x+dx/len*radius,y:c.y+dy/len*radius};}
+  const p=node.internals.positionAbsolute,vertices=[{x:p.x+100,y:p.y+29},{x:p.x+164,y:p.y+110},{x:p.x+36,y:p.y+110}];
+  const cross=(a:Point,b:Point)=>a.x*b.y-a.y*b.x;
+  let nearest=Infinity;
+  for(let i=0;i<3;i++){const a=vertices[i],b=vertices[(i+1)%3],segment={x:b.x-a.x,y:b.y-a.y},q={x:a.x-c.x,y:a.y-c.y},den=cross({x:dx,y:dy},segment);if(Math.abs(den)<1e-8)continue;const t=cross(q,segment)/den,u=cross(q,{x:dx,y:dy})/den;if(t>=0&&u>=0&&u<=1)nearest=Math.min(nearest,t);}
+  if(Number.isFinite(nearest))return {x:c.x+dx*nearest,y:c.y+dy*nearest};
+ }
  const w=node.measured.width||202,h=node.measured.height||160;
  const cx=node.internals.positionAbsolute.x+w/2,cy=node.internals.positionAbsolute.y+h/2;
  const dx=other.internals.positionAbsolute.x+(other.measured.width||202)/2-cx;
