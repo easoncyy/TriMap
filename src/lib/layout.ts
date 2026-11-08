@@ -21,12 +21,15 @@ export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:strin
  const depth=new Map<string,number>(),queue:string[]=[];
  function visit(start:string,base:number){depth.set(start,base);queue.push(start);for(let i=0;i<queue.length;i++){const at=queue[i];for(const next of [...adj.get(at)!].sort())if(!depth.has(next)){depth.set(next,depth.get(at)!+1);queue.push(next);}}}
  if(ids.has(root))visit(root,0);
- for(const n of [...nodes].sort((a,b)=>a.id.localeCompare(b.id)))if(!depth.has(n.id))visit(n.id,Math.max(0,...depth.values())+1);
- const levels=new Map<number,string[]>();for(const n of nodes){const d=depth.get(n.id)!;levels.set(d,[...(levels.get(d)||[]),n.id]);}
+ const connected=new Set(depth.keys());
+ for(const n of [...nodes].sort((a,b)=>a.id.localeCompare(b.id)))if(!depth.has(n.id))visit(n.id,0);
+ const levels=new Map<number,string[]>();for(const n of nodes.filter(n=>connected.has(n.id))){const d=depth.get(n.id)!;levels.set(d,[...(levels.get(d)||[]),n.id]);}
  const positions:Record<string,Point>={},height=Math.max(1,...[...levels.values()].map(x=>x.length))*260;
  for(const [d,items] of [...levels.entries()].sort((a,b)=>a[0]-b[0])){
   items.sort((a,b)=>{const center=(id:string)=>{const prior=adj.get(id)!.filter(x=>positions[x]);return prior.length?prior.reduce((sum,x)=>sum+positions[x].y,0)/prior.length:height/2;};return center(a)-center(b)||a.localeCompare(b);});
   items.forEach((id,i)=>{positions[id]={x:80+d*480,y:80+height/2+(i-(items.length-1)/2)*260};});
  }
+ const detached=nodes.filter(n=>!connected.has(n.id)).sort((a,b)=>a.id.localeCompare(b.id));
+ detached.forEach((n,i)=>{positions[n.id]={x:80+(i%3)*480,y:height+420+Math.floor(i/3)*300};});
  return {prisms:positions,mirrors:routeMirrors(positions,edges)};
 }
