@@ -23,7 +23,7 @@
 
 /* Knowledge is the prism; mirrors are independent ray-routing objects. */
 .knowledge-node.optical-node{width:200px;min-height:190px;padding:12px;background:transparent;border:1px solid transparent;box-shadow:none;text-align:center}.optical-node .prism-shape{width:155px;height:100px;display:block;margin:auto;filter:drop-shadow(0 0 9px color-mix(in srgb,var(--node-color) 25%,transparent))}.optical-node strong{margin:4px 0 7px;font-size:13px}.optical-node .node-kind{font-size:9px}.optical-node .optical-summary{display:none}.optical-node .node-bottom{display:block;border:0;padding-top:2px}.knowledge-node.optical-node.selected{background:#161423b8;border:1px solid color-mix(in srgb,var(--node-color) 50%,transparent);box-shadow:0 0 28px color-mix(in srgb,var(--node-color) 9%,transparent)}.light-source .prism-shape{filter:drop-shadow(0 0 18px var(--node-color))}.routing-mirror{width:76px;height:100px;text-align:center;color:#bddbea;cursor:grab}.routing-mirror svg{width:76px;height:76px}.routing-mirror span{font-size:9px;white-space:nowrap}.routing-mirror.selected svg{filter:drop-shadow(0 0 12px #9dcff6)}.routing-mirror .react-flow__handle{opacity:0;pointer-events:none}.mirror-inspector{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;font-size:11px;color:#bbd6e6}.mirror-inspector label{display:flex;align-items:center;gap:7px}.mirror-inspector input{width:150px}.mirror-inspector select{width:210px;font-size:11px;padding:6px}.mirror-inspector button{font-size:10px}.optical-path{font-size:10px;color:#b0a1c8}.studio .react-flow__edge.animated path.react-flow__edge-path{filter:drop-shadow(0 0 3px #ab9fe44d);animation-duration:3s}.tool-main{max-height:150px;overflow:auto}.studio .toast{bottom:165px}
-.routing-mirror.selected .react-flow__handle-right{opacity:1;pointer-events:all;width:22px!important;height:22px!important;background:#a9deff!important;border:3px solid #33526d!important;cursor:crosshair}.routing-mirror.selected .react-flow__handle-right:after{content:'↗';position:absolute;inset:-1px;text-align:center;color:#152e41;font-size:15px}.studio:has(.routing-mirror.selected) .optical-node .react-flow__handle-left{opacity:1;pointer-events:all;width:20px!important;height:20px!important;background:#71d7bd!important;border:3px solid #294d45!important}.routing-mirror span{font-size:9px}
+.routing-mirror.selected .react-flow__handle-right{opacity:1;pointer-events:all;width:22px!important;height:22px!important;background:#a9deff!important;border:3px solid #33526d!important;cursor:crosshair}.routing-mirror.selected .react-flow__handle-right:after{content:'↗';position:absolute;inset:-1px;text-align:center;color:#152e41;font-size:15px}.studio.is-picking .optical-node .react-flow__handle-left{opacity:1;pointer-events:all;width:20px!important;height:20px!important;background:#080a08!important;border:1px solid #b9c0ae!important}.routing-mirror span{font-size:9px}
 .routing-mirror{width:110px;height:112px;display:flex;flex-direction:column;align-items:center}.mirror-relation-name{display:block;max-width:150px;white-space:normal!important;text-align:center;font-size:11px!important;color:#e4eff9;line-height:1.5}.routing-mirror small{font-size:8px;color:#d6b77b}.routing-mirror.selected .mirror-relation-name{color:white}.routing-mirror svg{flex-shrink:0}.routing-mirror{width:76px}
 
 /* NOCTURNE — black field, optical geometry, quiet typography, restrained spectrum. */
@@ -32,5 +32,48 @@
 @media(max-width:600px){.studio .topbar{padding:0 12px;height:54px}.studio .brand small{font-size:5px;letter-spacing:1px}.studio .lens-tab{padding:12px 10px}.studio .lens-tab strong{font-size:10px;letter-spacing:1px}.studio .spectrum-tools{padding:8px}.studio .tool-main button{font-size:9px;padding:6px}.studio .detail-scroll{padding:16px}}
 @media(prefers-reduced-motion:reduce){.studio .react-flow__renderer{animation:none}}
 .studio .react-flow{background:#060707!important;--xy-background-color:#060707}.studio .optical-node strong{font-size:16px;color:#e1e3d9;letter-spacing:.8px}.studio .mirror-relation-name{font-size:12px!important;color:#c4c9ba}.studio .optical-node .node-kind{color:#a0a795;font-size:9px}.studio .node-bottom{color:#929b85}.studio .light-source .prism-shape circle:first-child{stroke:#e3e1cf}.studio .optical-node .prism-shape>path:first-child{stroke:#e6e8de;stroke-width:1.1}.studio .detail-panel{background:#0d0f0e;border-color:#30332d}.studio .detail-summary{color:#c7ccc1}.studio .body-text{color:#a7aea1}.studio .spectrum-tools{background:#090b0a}.studio .canvas-content{background:#060707}
-.studio:has(.routing-mirror.selected) .optical-node .react-flow__handle-left{width:10px!important;height:10px!important;background:#b7c0ac!important;border:1px solid #4e5945!important;box-shadow:none!important;opacity:.5}.studio .routing-mirror.selected .react-flow__handle-right{width:15px!important;height:15px!important;background:#cad2c0!important;border:1px solid #5b684f!important}.studio .routing-mirror.selected .react-flow__handle-right:after{font-size:10px;color:#26331d}.studio .optical-node strong{font-size:18px}.studio .mirror-relation-name{font-size:14px!important}
+.studio.is-picking .optical-node .react-flow__handle-left{width:10px!important;height:10px!important;background:#080a08!important;border:1px solid #b9c0ae!important;box-shadow:0 0 0 4px rgba(185,192,174,.1)!important;opacity:1!important}.studio .routing-mirror.selected .react-flow__handle-right{width:15px!important;height:15px!important;background:#cad2c0!important;border:1px solid #5b684f!important}.studio .routing-mirror.selected .react-flow__handle-right:after{font-size:10px;color:#26331d}.studio .optical-node strong{font-size:18px}.studio .mirror-relation-name{font-size:14px!important}
 .studio .mirror-relation-name{min-width:150px;max-width:180px;white-space:normal!important;text-wrap:balance}.studio .routing-mirror{overflow:visible}
+
+/* ── Dark side of the moon: one white ray, six colours, one gel ───────── */
+.studio .react-flow__edge-path{stroke-linecap:round}
+.studio .react-flow__edge-text,.studio .react-flow__edge-textbg{display:none}
+.studio .optical-node .prism-shape,.studio .routing-mirror .mirror-shape{overflow:visible}
+.studio .optical-node .prism-shape .prism-body{fill:#f4f1e2;fill-opacity:.02;stroke:#e8e7db;stroke-width:1.05}
+.studio .optical-node .prism-shape .prism-facet,.studio .optical-node .prism-shape .prism-inner{fill:none;stroke:#7b8574;stroke-width:.6;stroke-opacity:.55}
+.studio .optical-node .prism-shape .prism-beam{stroke:#f4f2e6;stroke-width:1.1;stroke-opacity:.9}
+.studio .optical-node .prism-shape .prism-ray{fill:none;stroke-width:1;stroke-opacity:.9}
+.studio .optical-node .prism-shape{width:118px;height:118px}
+.studio .optical-node .prism-shape .prism-ghost{fill:none;stroke:#c9cabf;stroke-width:.6;stroke-opacity:.22;stroke-dasharray:2 3}
+.studio .optical-node.selected .prism-shape .prism-body{stroke:#fdfbf0;stroke-width:1.35}
+.studio .optical-node.selected .prism-shape .prism-ray{stroke-opacity:1}
+.studio .optical-node.selected .prism-shape{filter:drop-shadow(0 0 10px rgba(240,238,224,.14))}
+.studio .light-source .prism-shape .source-halo{fill:none;stroke:#e9e6d6;stroke-opacity:.14;stroke-width:.8}
+.studio .light-source .prism-shape .source-ring{fill:#f4efd6;fill-opacity:.06;stroke:#e9e6d6;stroke-opacity:.5;stroke-width:.9}
+.studio .light-source .prism-shape .source-core{fill:#f6f2dd;stroke:none}
+.studio .light-source .prism-shape{filter:drop-shadow(0 0 18px rgba(246,242,221,.35))}
+.studio .routing-mirror{color:#d8dccf;cursor:grab}
+.studio .routing-mirror:active{cursor:grabbing}
+.studio .routing-mirror .mirror-halo{fill:none;stroke:#e9e6d6;stroke-width:7;stroke-opacity:.05;stroke-linecap:round}
+.studio .routing-mirror .mirror-surface{fill:none;stroke:#efeee3;stroke-width:1.7;stroke-linecap:round}
+.studio .routing-mirror .mirror-edge{fill:none;stroke:#8f9884;stroke-width:.7;stroke-opacity:.6}
+.studio .routing-mirror .mirror-pin{fill:#f3f1e5;opacity:.8}
+.studio .routing-mirror.selected .mirror-surface{stroke:#fffdf2}
+.studio .routing-mirror.selected .mirror-shape{filter:drop-shadow(0 0 10px rgba(240,238,224,.25))}
+.studio .routing-mirror .mirror-relation-name{font-size:11px!important;letter-spacing:.6px;color:#b9c0ae;text-shadow:0 0 6px #060707,0 0 12px #060707;transition:color .2s}
+.studio .routing-mirror.selected .mirror-relation-name{color:#f0eee2}
+.gel-sweep{position:absolute;inset:0;z-index:12;pointer-events:none;background:linear-gradient(96deg,color-mix(in srgb,var(--gel) 3%,transparent) 0%,color-mix(in srgb,var(--gel) 7%,transparent) 82%,color-mix(in srgb,var(--gel) 15%,transparent) 100%);border-right:1px solid color-mix(in srgb,var(--gel) 70%,transparent);box-shadow:18px 0 44px -14px color-mix(in srgb,var(--gel) 40%,transparent);opacity:0;animation:gel-pull .76s cubic-bezier(.3,.7,.2,1) both}
+@keyframes gel-pull{0%{opacity:0;transform:translateX(-100%) skewY(1.2deg)}9%{opacity:1}62%{opacity:.85}100%{opacity:0;transform:translateX(0) skewY(0)}}
+.studio .lens-tab{overflow:hidden}
+.studio .lens-tab::before{content:'';position:absolute;inset:5px 7px;border:1px solid color-mix(in srgb,var(--tab-color) 26%,transparent);border-radius:4px;background:linear-gradient(180deg,color-mix(in srgb,var(--tab-color) 16%,transparent),transparent 85%);opacity:0;transition:opacity .35s ease}
+.studio .lens-tab.active::before{opacity:.85}
+.studio .lens-tab.active{background:linear-gradient(180deg,color-mix(in srgb,var(--tab-color) 9%,transparent),transparent 70%)!important;box-shadow:inset 0 -2px var(--tab-color)!important}
+.studio .lens-tab.active::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--tab-color);animation:gel-edge .5s ease-out both}
+.studio .lens-tab.active .lens-dot{box-shadow:0 0 10px var(--tab-color)!important;opacity:1;background:var(--tab-color)!important}
+@keyframes gel-edge{from{transform:scaleX(.25);opacity:0}to{transform:scaleX(1);opacity:.9}}
+.studio .routing-mirror.selected .react-flow__handle-right{width:12px!important;height:12px!important;background:#080a08!important;border:1px solid #ecead9!important;box-shadow:0 0 0 3px rgba(236,234,217,.1)!important}
+.studio .routing-mirror.selected .react-flow__handle-right:after{content:''!important;display:none!important}
+.studio.is-picking .optical-node .react-flow__handle-left{opacity:1!important;pointer-events:all!important;width:9px!important;height:9px!important;background:#080a08!important;border:1px solid #b9c0ae!important;box-shadow:0 0 0 4px rgba(185,192,174,.08)!important}
+.studio .routing-mirror .mirror-shape,.studio .routing-mirror .mirror-relation-name,.studio .routing-mirror small{pointer-events:none}
+@media(max-width:600px){.studio .routing-mirror .mirror-relation-name{font-size:12px!important}}
+@media(prefers-reduced-motion:reduce){.gel-sweep{display:none}.studio .lens-tab.active::after{animation:none}}

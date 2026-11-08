@@ -1,10 +1,37 @@
 'use client';
 import {Handle,Position,type NodeProps} from '@xyflow/react';
+
+
+const point = (p: {x: number; y: number}) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+const line = (points: {x: number; y: number}[]) => points.map(point).join(' L ');
+
 export function KnowledgePrism({data,selected}:NodeProps){
  const color=String(data.color),root=!!data.lightSource;
  return <div className={`knowledge-node optical-node ${selected?'selected':''} ${root?'light-source':''}`} style={{'--node-color':color} as React.CSSProperties}>
  <Handle type="target" position={Position.Left}/><span className="node-kind">{root?'光源':String(data.kind)} · {String(data.dimension)}</span>
- <svg viewBox="0 0 180 110" className="prism-shape" aria-hidden="true">{root?<><circle cx="90" cy="54" r="28" fill={color} fillOpacity=".2" stroke={color}/><circle cx="90" cy="54" r="12" fill={color}/>{Array.from({length:12},(_,i)=><path key={i} d="M90 15V5" stroke={color} transform={`rotate(${i*30} 90 54)`}/>)}</>:<><path d="M90 7 164 100H16Z" fill={color} fillOpacity=".12" stroke={color} strokeWidth="1.5"/><path d="m90 7 4 65 70 28M94 72 16 100" fill="none" stroke={color} opacity=".6"/><path d="m16 100 78-28-4-65" fill={color} fillOpacity=".1"/><path d="m34 77 106-7" stroke="#a296ff"/><path d="m36 80 106-5" stroke="#67d6c1"/><path d="M38 83 144 82" stroke="#ffb77a"/></>}</svg>
+ <svg viewBox="0 0 120 120" className="prism-shape" aria-hidden="true">
+  {root
+   ? <g className="prism-glow"><circle className="source-halo" cx="60" cy="56" r="34"/><circle className="source-ring" cx="60" cy="56" r="22"/><circle className="source-core" cx="60" cy="56" r="9"/></g>
+   : <g className="prism-glass">
+      <path className="prism-body" d="M60 12 L103.3 87 L16.7 87 Z"/>
+     </g>}
+ </svg>
  <strong>{String(data.title)}</strong><span className="optical-summary">{String(data.summary)}</span><span className="node-bottom">{String(data.connections)} 条关系</span><Handle type="source" position={Position.Right}/></div>;
 }
-export function RoutingMirror({data,selected}:NodeProps){return <div className={`routing-mirror ${selected?'selected':''}`}><Handle type="target" position={Position.Left} isConnectable={false}/><svg viewBox="0 0 76 76" aria-hidden="true"><circle className="mirror-orbit" cx="38" cy="38" r="29" fill="none" stroke="#aaa99f" strokeWidth=".7"/><g transform={`rotate(${Number(data.angle)} 38 38)`}><path d="M10 38H66" stroke="#efeee7" strokeWidth="2"/><path d="M12 41H64" stroke="#55564f" strokeWidth=".8"/></g><circle cx="38" cy="38" r="2" fill="#edece3"/></svg><span className="mirror-relation-name">{String(data.title)}</span>{!!data.preview&&<small>目标预览 · 未发布</small>}<Handle type="source" position={Position.Right} isConnectable={selected} isConnectableStart={selected}/></div>;}
+
+export function RoutingMirror({data,selected}:NodeProps){
+ return <div className={`routing-mirror ${selected?'selected':''}`}>
+  <Handle type="target" position={Position.Left} isConnectable={false}/>
+  <svg viewBox="0 0 76 76" className="mirror-shape" aria-hidden="true">
+   <g className="mirror-inner" transform={`rotate(${Number(data.angle)} 38 38)`}>
+    <path className="mirror-halo" d="M10 38H66"/>
+    <path className="mirror-surface" d="M10 38H66"/>
+    <path className="mirror-edge" d="M13 42H63"/>
+   </g>
+   <circle className="mirror-pin" cx="38" cy="38" r="1.8"/>
+  </svg>
+  <span className="mirror-relation-name">{String(data.title)}</span>
+  {!!data.preview&&<small>目标预览 · 未发布</small>}
+  <Handle type="source" position={Position.Right} isConnectable={selected} isConnectableStart={selected}/>
+ </div>;
+}
