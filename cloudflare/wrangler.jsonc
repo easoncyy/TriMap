@@ -1,0 +1,1 @@
+{"name":"trimap-spectrum-atlas","pages_build_output_dir":"./dist","compatibility_date":"2026-11-10","compatibility_flags":["nodejs_compat"],"d1_databases":[{"binding":"DB","database_name":"trimap-atlas","database_id":"793857a2-4789-4124-8022-87dd7d8c105c","migrations_dir":"./migrations"}]}

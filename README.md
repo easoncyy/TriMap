@@ -95,3 +95,7 @@ npm run test:integration
 `public/materials/fabric/` 收录 ambientCG Fabric041 的 CC0 材质包，来源与使用说明见 `public/materials/README.md`。桌面使用本地颜色纹理并进行深色调色；棱镜、光源、关系镜和分类卡使用 SVG/CSS 的高光、厚度和投影表现。
 
 当前未接入物理渲染器，法线、粗糙度与位移贴图尚未参与渲染；拟物艺术效果仍待完善，不能将本轮材质调整视为已通过审美验收。最近类型检查及 25 项单元测试通过，包含环形布局和标签与光线碰撞检查；最新文字避让尚未完成浏览器验收。
+
+## Cloudflare Pages
+
+独立部署配置与说明见 [cloudflare/README.md](cloudflare/README.md)。正式地址：https://trimap-spectrum-atlas.pages.dev 。前端复用当前代码，服务端使用 Pages Functions + D1；本地 SQLite 流程保留。线上访客可浏览、创建个人图谱和反馈，不依赖 ChatGPT 登录。维护者使用前需在 Cloudflare 配置自己掌握的强维护口令。大陆直连可达性尚未验证。

@@ -9,3 +9,6 @@ next-env.d.ts
 desktop.ini
 Thumbs.db
 *.log
+cloudflare/dist/
+cloudflare/.wrangler/
+cloudflare/.dev.vars*

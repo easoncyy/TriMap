@@ -1,0 +1,1 @@
+import React from 'react';import {createRoot} from 'react-dom/client';import Atlas from '../src/components/Atlas';import '../src/app/globals.css';createRoot(document.getElementById('root')!).render(<Atlas/>);
