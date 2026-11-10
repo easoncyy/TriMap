@@ -66,9 +66,16 @@ src/lib/storage.ts     SQLite、迁移、图谱归属与事务
 src/lib/auth.ts        维护者权限与请求校验
 src/lib/diff.ts        草稿和版本差异
 src/lib/seed.ts        演示样例
+src/lib/application-content.ts   具身智能应用层知识卡片与跨地图关联
 src/app/globals.css    视觉主题、响应式与动效
  tests/                单元与接口集成测试
 ```
+
+## 应用层内容
+
+`src/lib/application-content.ts` 包含应用侧的教学初稿，围绕任务边界、场景检索增强、任务专门训练的数据需求、Sim-to-Real、人工接管与载体适配，连接相应的生态资源和认知方法。每张卡片标为「待核实」，来源链接只支持相应概念或案例，不表示本组已经完成阅读、实验或课程对应核查。算法和基础设施的内部实现留给相应专题。
+
+这批卡片会进入新建数据库的共享样例。已有 `data/atlas.sqlite` 不会因更新种子而自动覆盖，维护者应在现有图谱中核对后通过草稿与发布流程纳入内容，以保留已有编辑、反馈与版本历史。
 
 ## 验证
 
