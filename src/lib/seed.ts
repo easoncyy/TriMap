@@ -1,4 +1,5 @@
 import type {Store, KnowledgeNode} from './model';
+import {applicationNodes, applicationRelations} from './application-content';
 const node=(id:string,title:string,kind:string,lens:KnowledgeNode['lens'],summary:string,x:number,y:number,body=summary,sources:string[]=[]):KnowledgeNode=>({id,title,kind,lens,summary,body,sources,status:'待核实',x,y});
 export const seed:Store={nodes:[
 node('task','桌面抓放','典型任务','domain','从看见目标，到可靠地完成一次抓取与放置。',420,220,'贯穿三张地图的示例任务。先理解感知、计算与操作的整体联系。当前所有内容为框架样例，尚未形成团队实验结论。'),
@@ -11,7 +12,8 @@ node('libero','LIBERO','评测资源','ecology','用于研究机器人操作和�
 node('infra','部署与算力','资源条件','ecology','硬件、运行环境与工具链共同限制可行方案。',350,350),
 node('question','更快一定更可靠吗？','研究问题','cognition','推理延迟下降，会不会改善抓放任务表现？',360,100,'当前为待检验问题。离线测速不能证明闭环任务成功率提高，应控制任务、策略和环境条件。'),
 node('comparison','控制变量比较','思考方法','cognition','固定其他条件，只改变一个明确因素。',80,350),
-node('experiment','实验与失败记录','实践案例','cognition','保留配置、输入输出、结果与异常。',650,350,'尚无真实实验结果。后续记录设备、模型版本、种子、任务、次数和失败类型，避免用演示代替评价。')
+node('experiment','实验与失败记录','实践案例','cognition','保留配置、输入输出、结果与异常。',650,350,'尚无真实实验结果。后续记录设备、模型版本、种子、任务、次数和失败类型，避免用演示代替评价。'),
+...applicationNodes
 ],relations:[
 {id:'r1',source:'vision',target:'task',label:'提供感知',reason:'抓放任务需要获取目标与环境信息。'},
 {id:'r2',source:'latency',target:'task',label:'形成时间约束',reason:'观测与动作之间的等待可能影响任务；具体影响需要实验。'},
@@ -24,5 +26,6 @@ node('experiment','实验与失败记录','实践案例','cognition','保留配�
 {id:'r9',source:'question',target:'latency',label:'检验影响',reason:'研究问题将延迟与任务表现联系起来。'},
 {id:'r10',source:'comparison',target:'question',label:'组织验证',reason:'避免多个变量同时变化导致归因困难。'},
 {id:'r11',source:'experiment',target:'question',label:'提供证据',reason:'这是待执行的证据收集计划，并非已有结论。'},
-{id:'r12',source:'experiment',target:'libero',label:'候选实验环境',reason:'待完成兼容性与资源验证。'}
+{id:'r12',source:'experiment',target:'libero',label:'候选实验环境',reason:'待完成兼容性与资源验证。'},
+...applicationRelations
 ],draft:null,feedback:[],revisions:[]};
