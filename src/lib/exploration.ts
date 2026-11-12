@@ -5,6 +5,7 @@ import type {Lens} from './model.ts';
 export const EXPLORATION_VERSION = 1;
 
 export type ExplorationState = {
+  folds?: Record<string,Record<string,boolean>>;
   version: number;
   lens: Lens;
   focus: string;
@@ -115,6 +116,7 @@ export function parseExploration(raw: string | null): ExplorationState | null {
   const parsed = data as Record<string, unknown>;
   const base = emptyExploration();
   return {
+    folds: parsed.folds&&typeof parsed.folds==='object'&&!Array.isArray(parsed.folds)?Object.fromEntries(Object.entries(parsed.folds as Record<string,unknown>).filter(([,v])=>v&&typeof v==='object'&&!Array.isArray(v)).map(([k,v])=>[k,Object.fromEntries(Object.entries(v as Record<string,unknown>).filter(([,value])=>typeof value==='boolean')) as Record<string,boolean>])):{},
     version: EXPLORATION_VERSION,
     lens: isLens(parsed.lens) ? parsed.lens : base.lens,
     focus: typeof parsed.focus === 'string' && parsed.focus ? parsed.focus : base.focus,

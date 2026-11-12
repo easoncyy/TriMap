@@ -43,3 +43,7 @@ PR 的 `Verify Infra and Pages` 工作流安装锁定依赖，运行类型、单
 ## 固定标签与退役样例
 
 文字固定在所属物体附近，自动布局通过增加物体间距与考虑固定标签区域减少遮挡，不再独立移动文字。迁移 0002 只删除 id=example-branching-v1 且 owner=system 的旧演示；初始化不再创建该样例，用户个人复制及其他地图不受影响。
+
+本轮新增 Infra 内容与镜面折叠，发布顺序：构建部署（停止创建演示样例）→ 应用迁移 0002 → 执行 sync-content.mjs → smoke 验证版本及 Infra 卡片，并确认 /api/atlases 不再返回系统演示。
+
+固定 Wrangler 的本地模拟器不支持当前线上兼容日期；本地预览可显式传 `pages dev dist --compatibility-date 2026-05-22`，仅改变本地模拟日期，不修改线上配置。

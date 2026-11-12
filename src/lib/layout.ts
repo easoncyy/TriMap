@@ -44,4 +44,3 @@ export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:strin
  detached.forEach((n,i)=>{positions[n.id]={x:80+(i%3)*620,y:height+900+Math.floor(i/3)*300};});
  return {prisms:positions,mirrors:routeMirrors(positions,edges)};
 }
-

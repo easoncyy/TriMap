@@ -3,9 +3,6 @@ import {useId} from 'react';
 import {Handle,Position,type NodeProps} from '@xyflow/react';
 
 
-const point = (p: {x: number; y: number}) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-const line = (points: {x: number; y: number}[]) => points.map(point).join(' L ');
-
 export function KnowledgePrism({data,selected}:NodeProps){
  const glass=useId().replace(/:/g,'');
  const color=String(data.color),root=!!data.lightSource;
@@ -40,6 +37,7 @@ export function RoutingMirror({data,selected}:NodeProps){
    </g>
    <circle className="mirror-pin" cx="38" cy="38" r="1.8"/>
   </svg>
+  {typeof data.onToggle==='function'&&<button type="button" className="mirror-fold nodrag nopan" aria-label={`${data.folded?'展开':'折叠'}关系：${String(data.title)}`} title={data.folded?`展开：${String(data.targetTitle||'下一层知识')}`:'折叠这条关系的下游'} onClick={event=>{event.stopPropagation();(data.onToggle as ()=>void)();}}>{data.folded?'+':'−'}</button>}
   <span className="mirror-relation-name">{String(data.title)}</span>
   {!!data.preview&&<small>目标预览 · 未发布</small>}
   <Handle type="source" position={Position.Right} isConnectable={selected} isConnectableStart={selected}/>

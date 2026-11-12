@@ -125,3 +125,5 @@ test('an empty store produces a usable default view', () => {
   const loaded = loadExploration(memory().read, 'official');
   assert.deepEqual(loaded, emptyExploration());
 });
+
+test('fold overrides persist per map while rejecting malformed entries',()=>{const state=parseExploration(JSON.stringify({folds:{'domain:dispersion:task':{ab:true,bc:false,bad:3},invalid:3}}));assert.deepEqual(state?.folds,{'domain:dispersion:task':{ab:true,bc:false}});});
