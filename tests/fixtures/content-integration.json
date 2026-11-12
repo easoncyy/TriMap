@@ -1,0 +1,1900 @@
+{
+  "baseSha": "f381e7bbf9ea05a15e3f3097ce6b23618db27cb1",
+  "prHeadSha": "1c77e9c6244d28b2509c48ff23dc804189e2f375",
+  "documentSha256": "55a96632591bbd240c9a54f1953576cd50eea6735e73d29d34e8771be6ce5e1d",
+  "approvedBodies": {
+    "app-boundary": "具身任务由目标、对象、环境、成功条件和失败处置共同定义。以桌面抓放为例，“把杯子放到托盘”还需要说明杯子的尺寸与材质、托盘位置、工作范围、人员是否进入，以及杯子滑落后如何处理。运行边界描述预定的适用条件；超出边界时，系统应暂停、请求帮助或切换方案。自动驾驶中的运行设计域（ODD）可借鉴其描述适用条件的方法，但不是所有机器人的统一标准。本卡给出的是教学示例中的边界写法，本组尚无实机核验。",
+    "app-scene-rag": "场景检索增强让机器人按当前任务调用空间记忆：收到“把杯子放到托盘”的指令后，从场景图或语义地图中检索杯子、托盘及相关空间关系，再将结果提供给规划环节。检索回答“记忆中哪些信息相关”，现场观测回答“这些信息现在是否仍然成立”。在本卡的桌面抓放案例中，可以按“观测—建图—任务检索—现场核验—执行”梳理流程；具体系统可以采用不同实现。EmbodiedRAG 展示了动态三维场景子图检索的研究方法，其论文结果对应特定实验条件，不能直接视为本组场景的效果。",
+    "app-specialized-training": "任务专门训练使机器人适应特定对象、动作和工作流程，不预设必须从通用预训练模型开始。应用侧先定义可观察的成功标准，再确定数据需要覆盖的物体形状、位置、遮挡、光照、干扰和失败情形。数据划分取决于评测目标：检验同一工位的重复表现，应使用独立执行回合；检验对新物体或新场景的泛化，应将相应对象或场景留出测试。LeRobot 提供遥操作、记录、训练和部署的工作流；模型结构及参数更新属于算法层。没有真实数据时，应将采集和评测写成计划，不写成已完成训练。",
+    "app-sim-real": "Sim-to-Real 指把仿真中形成的能力迁移到真实设备和环境。视觉外观、物体表面、接触与摩擦、传感器误差、控制时延及现场人员行为，都可能造成仿真与现场表现不同。应用侧应按“任务—场景—对象—设备—可复现现象”记录失败，再区分感知、操作、时序和流程问题。领域随机化通过改变仿真条件，旨在提高对现场变化的适应性；效果需要在目标条件下用实机测试判断。本组目前没有可作为结论的仿真或实机结果。",
+    "app-product-fit": "具身产品可以采用固定机械臂、轮式或履带平台、空中与水下设备，也可以采用人形机器人。载体、末端工具、感知和控制能力共同约束设备能到达哪里、接触什么、完成哪些动作。选型时应比较工作空间、地面与通道、负载、对象材质、供电、维护和人员协作条件。固定机械臂适合位置稳定、节拍明确的工位；移动操作平台可以跨工位工作，同时需要处理定位、通行和续航。夹爪、吸盘及专用工具对柔软、易碎或不规则物体的适用性也不同。上述内容是产品比较框架，不代表本组已经完成选型。",
+    "app-users": "应用生态中的使用者、现场操作员、领域专家、产品方、系统集成方和测试方承担不同工作。以应急机器人为例，救援人员描述危险环境中的任务与操作限制，产品方据此设计载体和交互方式，集成方连接设备与现场系统，测试方建立可重复的能力测量。生态地图应画清“谁提出需求、谁提供资源、谁检验结果”的具体关系。这个例子说明角色如何协作，不表示相关机构参与了本组项目；本组的实际参与者和关系应按具体任务核实。"
+  },
+  "legacyStore": {
+    "nodes": [
+      {
+        "id": "task",
+        "title": "桌面抓放",
+        "kind": "典型任务",
+        "lens": "domain",
+        "summary": "从看见目标，到可靠地完成一次抓取与放置。",
+        "body": "贯穿三张地图的示例任务。先理解感知、计算与操作的整体联系。当前所有内容为框架样例，尚未形成团队实验结论。",
+        "sources": [],
+        "status": "待核实",
+        "x": 420,
+        "y": 220
+      },
+      {
+        "id": "vision",
+        "title": "视觉感知",
+        "kind": "核心能力",
+        "lens": "domain",
+        "summary": "识别物体，并获取操作所需的信息。",
+        "body": "识别物体，并获取操作所需的信息。",
+        "sources": [],
+        "status": "待核实",
+        "x": 110,
+        "y": 80
+      },
+      {
+        "id": "latency",
+        "title": "推理延迟",
+        "kind": "系统指标",
+        "lens": "domain",
+        "summary": "从输入观测到获得模型输出所需的时间。",
+        "body": "推理延迟只是端到端延迟的一部分，不能直接等同于控制周期。需要明确测量边界、设备、精度与批大小。",
+        "sources": [],
+        "status": "待核实",
+        "x": 730,
+        "y": 90
+      },
+      {
+        "id": "feedback",
+        "title": "闭环反馈",
+        "kind": "技术方法",
+        "lens": "domain",
+        "summary": "执行后重新观察，依据偏差调整后续动作。",
+        "body": "执行后重新观察，依据偏差调整后续动作。",
+        "sources": [],
+        "status": "待核实",
+        "x": 170,
+        "y": 390
+      },
+      {
+        "id": "course",
+        "title": "课程与学习入口",
+        "kind": "学习路径",
+        "lens": "domain",
+        "summary": "连接能力、基础知识与真实课程。",
+        "body": "待补充适用专业、年级的培养方案和课程大纲。不得只凭课程名称推断覆盖内容。",
+        "sources": [],
+        "status": "待核实",
+        "x": 730,
+        "y": 380
+      },
+      {
+        "id": "lerobot",
+        "title": "LeRobot",
+        "kind": "开源框架",
+        "lens": "ecology",
+        "summary": "机器人学习的数据、策略与训练评测工具。",
+        "body": "官方文档是核查工具能力与运行条件的入口；具体版本、策略和任务兼容性需进一步核实。",
+        "sources": [
+          "https://huggingface.co/docs/lerobot/"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 100
+      },
+      {
+        "id": "libero",
+        "title": "LIBERO",
+        "kind": "评测资源",
+        "lens": "ecology",
+        "summary": "用于研究机器人操作和知识迁移的基准。",
+        "body": "用作实践候选资源，是否采用需先验证环境和策略能否匹配。",
+        "sources": [
+          "https://github.com/Lifelong-Robot-Learning/LIBERO"
+        ],
+        "status": "待核实",
+        "x": 600,
+        "y": 100
+      },
+      {
+        "id": "infra",
+        "title": "部署与算力",
+        "kind": "资源条件",
+        "lens": "ecology",
+        "summary": "硬件、运行环境与工具链共同限制可行方案。",
+        "body": "硬件、运行环境与工具链共同限制可行方案。",
+        "sources": [],
+        "status": "待核实",
+        "x": 350,
+        "y": 350
+      },
+      {
+        "id": "question",
+        "title": "更快一定更可靠吗？",
+        "kind": "研究问题",
+        "lens": "cognition",
+        "summary": "推理延迟下降，会不会改善抓放任务表现？",
+        "body": "当前为待检验问题。离线测速不能证明闭环任务成功率提高，应控制任务、策略和环境条件。",
+        "sources": [],
+        "status": "待核实",
+        "x": 360,
+        "y": 100
+      },
+      {
+        "id": "comparison",
+        "title": "控制变量比较",
+        "kind": "思考方法",
+        "lens": "cognition",
+        "summary": "固定其他条件，只改变一个明确因素。",
+        "body": "固定其他条件，只改变一个明确因素。",
+        "sources": [],
+        "status": "待核实",
+        "x": 80,
+        "y": 350
+      },
+      {
+        "id": "experiment",
+        "title": "实验与失败记录",
+        "kind": "实践案例",
+        "lens": "cognition",
+        "summary": "保留配置、输入输出、结果与异常。",
+        "body": "尚无真实实验结果。后续记录设备、模型版本、种子、任务、次数和失败类型，避免用演示代替评价。",
+        "sources": [],
+        "status": "待核实",
+        "x": 650,
+        "y": 350
+      },
+      {
+        "id": "app-boundary",
+        "title": "任务与运行边界",
+        "kind": "应用问题",
+        "lens": "domain",
+        "summary": "先写清机器人要完成什么，以及它被允许在哪些条件下工作。",
+        "body": "以桌面抓放为例，任务不能只写“把物体放好”。还要写目标物、放置位置、桌面范围、是否有人经过，以及物体滑落时怎样处理。运行设计域（ODD）原用于描述自动驾驶系统的工作条件；这里借用“明确适用条件”的思路，不把它当作所有机器人的统一标准。可练习：为一种机械臂或移动机器人列出三项适用条件和两项超出边界的情况。当前任务边界是教学示例，尚无实机核验。",
+        "sources": [
+          "https://www.nist.gov/publications/feature-description-assessing-autonomous-vehicle-performance"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 120
+      },
+      {
+        "id": "app-scene-rag",
+        "title": "场景检索增强",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "按当前任务检索相关场景信息，再核对信息是否仍符合现场。",
+        "body": "场景 RAG 在这里指把检索增强用于具身任务，例如从场景图中取出与指令有关的物体、位置和关系，再交给规划环节。它不是把整段网页答案直接当作现场事实。桌面抓放时，系统可以检索“杯子在桌面左侧”，但执行前仍需用当前观测确认杯子是否被移动。EmbodiedRAG 是这一方向的研究例子；它的实验条件和结果不能直接推广到本组场景。可练习：画出“观测—检索—核验—行动”的流程。",
+        "sources": [
+          "https://arxiv.org/abs/2410.23968"
+        ],
+        "status": "待核实",
+        "x": 470,
+        "y": 80
+      },
+      {
+        "id": "app-specialized-training",
+        "title": "任务专门训练需要什么",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "先确定新任务缺少哪些示例，再提出训练与验收要求。",
+        "body": "面对特定桌面、物体或操作流程，应用侧要说明成功动作和常见失败，收集覆盖不同物体位置、光照与干扰的示教，并留出未参与训练的测试情形。LeRobot 展示了遥操作、记录、训练和部署的工作流。选用何种模型、怎样更新参数属于算法专题。可练习：为“抓起不同形状的杯子”列出需采集的变化条件和测试条件；没有真实数据时只写计划，不声称完成训练。",
+        "sources": [
+          "https://huggingface.co/docs/lerobot/main/en/index"
+        ],
+        "status": "待核实",
+        "x": 780,
+        "y": 150
+      },
+      {
+        "id": "app-sim-real",
+        "title": "Sim-to-Real 差距",
+        "kind": "落地问题",
+        "lens": "domain",
+        "summary": "仿真中完成任务，实机在相同目标下仍可能失败。",
+        "body": "仿真与现场在物体表面、光照、接触、传感器误差和动作时延等方面可能不同。应用侧首先记录“在哪个具体条件下失败”，再与算法及基础设施成员一起定位原因。领域随机化是一种研究过的迁移方法，但使用它不能代替实机测试。可练习：为桌面抓放列出仿真和现场各三项可比较的条件，并设计逐项复测。当前没有本组的仿真或实机结果。",
+        "sources": [
+          "https://arxiv.org/abs/1703.06907"
+        ],
+        "status": "待核实",
+        "x": 760,
+        "y": 420
+      },
+      {
+        "id": "app-handover",
+        "title": "人工接管与任务恢复",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "当自主执行失去把握时，明确何时交给人、怎样安全继续。",
+        "body": "应用设计要写清触发条件、操作者能看到的信息、接管方式和恢复步骤。例如抓取对象被人移走后，可以暂停、重新观察或请求人工确认，不能继续执行旧位置的动作。不同载体和场景会改变交接要求。可练习：为抓放失败画一张“继续—重试—接管—停止”的判断图，并说明每条分支需要什么现场证据。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/performance-human-robot-interaction"
+        ],
+        "status": "待核实",
+        "x": 430,
+        "y": 510
+      },
+      {
+        "id": "app-product-fit",
+        "title": "载体与末端工具适配",
+        "kind": "产品设计",
+        "lens": "domain",
+        "summary": "根据任务环境选择机器人形态和接触物体的工具。",
+        "body": "具身应用包括机械臂、轮式或履带平台、空中与水下设备等，不以人形为默认答案。选择时看工作空间、通过性、负载、抓取对象、供电和人员协作方式。末端工具的形状和接触方式会改变任务可行性。可练习：比较固定机械臂与移动操作平台完成同一搬运任务时的适用条件。这里提供比较框架，不代表已完成产品选型。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 500
+      },
+      {
+        "id": "app-users",
+        "title": "现场使用者与领域专家",
+        "kind": "生态参与者",
+        "lens": "ecology",
+        "summary": "实际使用者提出任务，也提供设备表现是否有用的证据。",
+        "body": "应用生态中的使用者、现场操作员、领域专家、产品方与系统集成方承担不同工作。以应急机器人为例，救援人员提出任务要求，开发方据此选择载体和能力，测试方建立可重复的评测。不能从“某机构研究机器人”推断它参与了本组项目。后续应围绕已选择的具体任务，核实真实参与者及其关系。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 140,
+        "y": 100
+      },
+      {
+        "id": "app-embodiedrag",
+        "title": "EmbodiedRAG 研究",
+        "kind": "代表成果",
+        "lens": "ecology",
+        "summary": "一项从动态三维场景图检索任务相关信息的研究。",
+        "body": "该论文提出按任务检索三维场景子图，服务于语言驱动的机器人规划；它为领域地图中的“场景检索增强”提供具体研究入口。阅读时先确认论文使用的场景、载体和评测设置，再判断哪些思路可能用于本组选题。本文在图谱中是待阅读、待核实的资源入口，不能写成本组已经复现的成果。",
+        "sources": [
+          "https://arxiv.org/abs/2410.23968"
+        ],
+        "status": "待核实",
+        "x": 570,
+        "y": 100
+      },
+      {
+        "id": "app-nist-tests",
+        "title": "NIST 机器人性能测试资源",
+        "kind": "评测资源",
+        "lens": "ecology",
+        "summary": "用任务要求组织机器人能力测试的公开研究入口。",
+        "body": "NIST 的应急机器人项目讨论移动、操作、传感、通信、人机界面等测试维度，覆盖地面、水面和小型空中设备。它可帮助理解应用需求怎样转成可比较的测试，并连接到领域地图中的载体选择和认知地图中的评测设计。具体测试方法是否适合本组任务，需要读原始材料后判断。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 430,
+        "y": 400
+      },
+      {
+        "id": "app-evaluation",
+        "title": "从任务要求设计评测",
+        "kind": "分析方法",
+        "lens": "cognition",
+        "summary": "先明确成功条件，再决定要记录哪些失败和人工干预。",
+        "body": "教学示例：比较两种桌面抓放方案时，固定目标物、初始位置和测试次数，分别记录完成率、耗时、重试和人工接管。单次演示不能推出稳定性；仿真成绩也不能替代现场结果。NIST 的机器人测量工作以应用要求推动指标设计。本组尚未开展上述比较，下一步可先写一页测试计划，待有真实记录后再形成判断。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/measurement-science-robotics-and-autonomous-systems-program"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 100
+      },
+      {
+        "id": "app-gap-check",
+        "title": "仿真到现场的失败归因",
+        "kind": "分析方法",
+        "lens": "cognition",
+        "summary": "把失败定位到可检查的条件，避免只说“模型不行”。",
+        "body": "教学分析框架：先记录任务、设备、软件版本和复现步骤，再分别检查视觉输入、接触物理、动作时延和现场流程；每次只改变一项条件。若发现视觉识别在反光物体上失效，应把结论限定在该条件，不能推断所有实机任务都会失败。此卡是未来实践的记录方法，不是本组已有实验结论。",
+        "sources": [
+          "https://arxiv.org/abs/1703.06907",
+          "https://www.nist.gov/programs-projects/measurement-science-robotics-and-autonomous-systems-program"
+        ],
+        "status": "待核实",
+        "x": 610,
+        "y": 150
+      },
+      {
+        "id": "app-learning",
+        "title": "应用方向的学习计划",
+        "kind": "学习规划",
+        "lens": "cognition",
+        "summary": "从兴趣、现有能力和可获得的机会出发，选择下一项可完成的任务。",
+        "body": "填写框架：我想理解哪一种具身任务？现在能解释哪些概念、完成哪些小练习？还缺场景表示、数据采集、系统集成或评测中的哪一项？有哪些课程、官方文档或实践机会可用？下一步准备交付什么可检查的成果？教学示例：先写桌面抓放的任务边界，再阅读一份场景检索论文并设计核验流程。课程对应关系须依据适用年级的培养方案或课程大纲核实；个人经历、已读材料和能力进展待本人填写。",
+        "sources": [],
+        "status": "待核实",
+        "x": 390,
+        "y": 430
+      }
+    ],
+    "relations": [
+      {
+        "id": "r1",
+        "source": "vision",
+        "target": "task",
+        "label": "提供感知",
+        "reason": "抓放任务需要获取目标与环境信息。"
+      },
+      {
+        "id": "r2",
+        "source": "latency",
+        "target": "task",
+        "label": "形成时间约束",
+        "reason": "观测与动作之间的等待可能影响任务；具体影响需要实验。"
+      },
+      {
+        "id": "r3",
+        "source": "feedback",
+        "target": "task",
+        "label": "支持修正",
+        "reason": "后续观测用于调整执行。"
+      },
+      {
+        "id": "r4",
+        "source": "course",
+        "target": "vision",
+        "label": "提供学习入口",
+        "reason": "课程对应关系待依据培养方案核查。"
+      },
+      {
+        "id": "r5",
+        "source": "lerobot",
+        "target": "libero",
+        "label": "提供集成入口",
+        "reason": "参见 LeRobot 的 LIBERO 文档，使用前核查版本与条件。"
+      },
+      {
+        "id": "r6",
+        "source": "infra",
+        "target": "lerobot",
+        "label": "约束运行",
+        "reason": "策略运行需要匹配硬件与软件环境。"
+      },
+      {
+        "id": "r7",
+        "source": "lerobot",
+        "target": "task",
+        "label": "候选实现工具",
+        "reason": "是否用于该具体任务尚待验证。"
+      },
+      {
+        "id": "r8",
+        "source": "infra",
+        "target": "latency",
+        "label": "影响指标",
+        "reason": "设备和推理配置会影响耗时。"
+      },
+      {
+        "id": "r9",
+        "source": "question",
+        "target": "latency",
+        "label": "检验影响",
+        "reason": "研究问题将延迟与任务表现联系起来。"
+      },
+      {
+        "id": "r10",
+        "source": "comparison",
+        "target": "question",
+        "label": "组织验证",
+        "reason": "避免多个变量同时变化导致归因困难。"
+      },
+      {
+        "id": "r11",
+        "source": "experiment",
+        "target": "question",
+        "label": "提供证据",
+        "reason": "这是待执行的证据收集计划，并非已有结论。"
+      },
+      {
+        "id": "r12",
+        "source": "experiment",
+        "target": "libero",
+        "label": "候选实验环境",
+        "reason": "待完成兼容性与资源验证。"
+      },
+      {
+        "id": "app-r1",
+        "source": "task",
+        "target": "app-boundary",
+        "label": "用来界定",
+        "reason": "桌面抓放是说明任务对象、现场条件和成功标准的教学例子。"
+      },
+      {
+        "id": "app-r2",
+        "source": "app-boundary",
+        "target": "app-scene-rag",
+        "label": "限定检索任务",
+        "reason": "检索哪些场景信息，应由任务和运行条件决定。"
+      },
+      {
+        "id": "app-r3",
+        "source": "app-boundary",
+        "target": "app-specialized-training",
+        "label": "提出数据需求",
+        "reason": "任务中的对象和环境变化决定示教与测试需要覆盖什么。"
+      },
+      {
+        "id": "app-r4",
+        "source": "app-boundary",
+        "target": "app-sim-real",
+        "label": "确定现场条件",
+        "reason": "比较仿真和实机结果前，应明确两边任务条件。"
+      },
+      {
+        "id": "app-r5",
+        "source": "app-boundary",
+        "target": "app-product-fit",
+        "label": "约束产品选择",
+        "reason": "载体和末端工具需要匹配任务空间、对象和操作方式。"
+      },
+      {
+        "id": "app-r6",
+        "source": "app-boundary",
+        "target": "app-handover",
+        "label": "界定接管时机",
+        "reason": "超出任务或能力边界时，需要预先定义暂停和人工介入方式。"
+      },
+      {
+        "id": "app-r7",
+        "source": "app-scene-rag",
+        "target": "app-embodiedrag",
+        "label": "研究入口",
+        "reason": "EmbodiedRAG 讨论为机器人任务检索动态三维场景子图。"
+      },
+      {
+        "id": "app-r8",
+        "source": "app-embodiedrag",
+        "target": "app-learning",
+        "label": "提供阅读材料",
+        "reason": "阅读原论文后可记录其任务、证据和与本组选题的关系。"
+      },
+      {
+        "id": "app-r9",
+        "source": "app-specialized-training",
+        "target": "lerobot",
+        "label": "了解工作流",
+        "reason": "LeRobot 文档展示示教采集、数据集、策略训练和部署的基本环节。"
+      },
+      {
+        "id": "app-r10",
+        "source": "app-product-fit",
+        "target": "app-nist-tests",
+        "label": "查找测试维度",
+        "reason": "NIST 资源按任务讨论不同载体的能力与评测。"
+      },
+      {
+        "id": "app-r11",
+        "source": "app-nist-tests",
+        "target": "app-evaluation",
+        "label": "支持指标设计",
+        "reason": "评测资源可帮助把任务要求转成可观察的测试指标。"
+      },
+      {
+        "id": "app-r12",
+        "source": "app-sim-real",
+        "target": "app-gap-check",
+        "label": "组织失败归因",
+        "reason": "现场差距需要按可复现条件逐项检查。"
+      },
+      {
+        "id": "app-r13",
+        "source": "app-boundary",
+        "target": "app-evaluation",
+        "label": "定义成功条件",
+        "reason": "评测指标必须对应任务目标和运行边界。"
+      },
+      {
+        "id": "app-r14",
+        "source": "app-handover",
+        "target": "app-users",
+        "label": "需要现场参与",
+        "reason": "接管规则应结合实际操作者能看到的信息与操作能力。"
+      },
+      {
+        "id": "app-r15",
+        "source": "app-users",
+        "target": "app-evaluation",
+        "label": "提供任务要求",
+        "reason": "现场使用者的工作要求应进入测试条件和评价指标。"
+      }
+    ],
+    "draft": null,
+    "feedback": [],
+    "revisions": []
+  },
+  "mainStore": {
+    "nodes": [
+      {
+        "id": "task",
+        "title": "桌面抓放",
+        "kind": "典型任务",
+        "lens": "domain",
+        "summary": "从看见目标，到可靠地完成一次抓取与放置。",
+        "body": "贯穿三张地图的示例任务。先理解感知、计算与操作的整体联系。当前所有内容为框架样例，尚未形成团队实验结论。",
+        "sources": [],
+        "status": "待核实",
+        "x": 420,
+        "y": 220
+      },
+      {
+        "id": "vision",
+        "title": "视觉感知",
+        "kind": "核心能力",
+        "lens": "domain",
+        "summary": "识别物体，并获取操作所需的信息。",
+        "body": "识别物体，并获取操作所需的信息。",
+        "sources": [],
+        "status": "待核实",
+        "x": 110,
+        "y": 80
+      },
+      {
+        "id": "latency",
+        "title": "推理延迟",
+        "kind": "系统指标",
+        "lens": "domain",
+        "summary": "从输入观测到获得模型输出所需的时间。",
+        "body": "推理延迟只是端到端延迟的一部分，不能直接等同于控制周期。需要明确测量边界、设备、精度与批大小。",
+        "sources": [],
+        "status": "待核实",
+        "x": 730,
+        "y": 90
+      },
+      {
+        "id": "feedback",
+        "title": "闭环反馈",
+        "kind": "技术方法",
+        "lens": "domain",
+        "summary": "执行后重新观察，依据偏差调整后续动作。",
+        "body": "执行后重新观察，依据偏差调整后续动作。",
+        "sources": [],
+        "status": "待核实",
+        "x": 170,
+        "y": 390
+      },
+      {
+        "id": "course",
+        "title": "课程与学习入口",
+        "kind": "学习路径",
+        "lens": "domain",
+        "summary": "连接能力、基础知识与真实课程。",
+        "body": "待补充适用专业、年级的培养方案和课程大纲。不得只凭课程名称推断覆盖内容。",
+        "sources": [],
+        "status": "待核实",
+        "x": 730,
+        "y": 380
+      },
+      {
+        "id": "lerobot",
+        "title": "LeRobot",
+        "kind": "开源框架",
+        "lens": "ecology",
+        "summary": "机器人学习的数据、策略与训练评测工具。",
+        "body": "官方文档是核查工具能力与运行条件的入口；具体版本、策略和任务兼容性需进一步核实。",
+        "sources": [
+          "https://huggingface.co/docs/lerobot/"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 100
+      },
+      {
+        "id": "libero",
+        "title": "LIBERO",
+        "kind": "评测资源",
+        "lens": "ecology",
+        "summary": "用于研究机器人操作和知识迁移的基准。",
+        "body": "用作实践候选资源，是否采用需先验证环境和策略能否匹配。",
+        "sources": [
+          "https://github.com/Lifelong-Robot-Learning/LIBERO"
+        ],
+        "status": "待核实",
+        "x": 600,
+        "y": 100
+      },
+      {
+        "id": "infra",
+        "title": "部署与算力",
+        "kind": "资源条件",
+        "lens": "ecology",
+        "summary": "硬件、运行环境与工具链共同限制可行方案。",
+        "body": "硬件、运行环境与工具链共同限制可行方案。",
+        "sources": [],
+        "status": "待核实",
+        "x": 350,
+        "y": 350
+      },
+      {
+        "id": "question",
+        "title": "更快一定更可靠吗？",
+        "kind": "研究问题",
+        "lens": "cognition",
+        "summary": "推理延迟下降，会不会改善抓放任务表现？",
+        "body": "当前为待检验问题。离线测速不能证明闭环任务成功率提高，应控制任务、策略和环境条件。",
+        "sources": [],
+        "status": "待核实",
+        "x": 360,
+        "y": 100
+      },
+      {
+        "id": "comparison",
+        "title": "控制变量比较",
+        "kind": "思考方法",
+        "lens": "cognition",
+        "summary": "固定其他条件，只改变一个明确因素。",
+        "body": "固定其他条件，只改变一个明确因素。",
+        "sources": [],
+        "status": "待核实",
+        "x": 80,
+        "y": 350
+      },
+      {
+        "id": "experiment",
+        "title": "实验与失败记录",
+        "kind": "实践案例",
+        "lens": "cognition",
+        "summary": "保留配置、输入输出、结果与异常。",
+        "body": "尚无真实实验结果。后续记录设备、模型版本、种子、任务、次数和失败类型，避免用演示代替评价。",
+        "sources": [],
+        "status": "待核实",
+        "x": 650,
+        "y": 350
+      },
+      {
+        "id": "app-boundary",
+        "title": "任务与运行边界",
+        "kind": "应用问题",
+        "lens": "domain",
+        "summary": "先写清机器人要完成什么，以及它被允许在哪些条件下工作。",
+        "body": "具身任务由目标、对象、环境、成功条件和失败处置共同定义。以桌面抓放为例，“把杯子放到托盘”还需要限定杯子的尺寸与材质、托盘位置、桌面范围、人员是否进入工作区，以及杯子滑落后的处理方式。运行边界是系统被设计和验证过的条件集合；边界之外应暂停、请求帮助或切换方案。自动驾驶中的运行设计域（ODD）提供了描述适用条件的参考，但不能直接当成所有机器人通用的标准。",
+        "sources": [
+          "https://www.nist.gov/publications/feature-description-assessing-autonomous-vehicle-performance"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 120
+      },
+      {
+        "id": "app-scene-rag",
+        "title": "场景检索增强",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "按当前任务检索相关场景信息，再核对信息是否仍符合现场。",
+        "body": "场景检索增强把机器人积累的空间记忆变成按任务调用的信息：给定“把杯子放到托盘”的指令，从场景图或语义地图中检索杯子、托盘及两者的空间关系，再把相关子图交给规划环节。检索解决“该看哪部分记忆”，实时观测解决“记忆是否仍然有效”。因此完整链条是观测、建图、任务检索、现场核验和执行。EmbodiedRAG 展示了从动态三维场景图中检索任务相关子图的具体做法。",
+        "sources": [
+          "https://arxiv.org/abs/2410.23968"
+        ],
+        "status": "待核实",
+        "x": 470,
+        "y": 80
+      },
+      {
+        "id": "app-specialized-training",
+        "title": "任务专门训练需要什么",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "先确定新任务缺少哪些示例，再提出训练与验收要求。",
+        "body": "任务专门训练是让通用能力适应特定对象、动作和工作流程。应用侧先定义动作成功的可观察标准，再列出数据要覆盖的变化：物体形状和位置、遮挡、光照、抓取失败、人员干扰等。训练集与验收集应按场景或对象分开，避免同一桌面和同一批杯子同时出现在两边，造成泛化能力被高估。LeRobot 提供遥操作、记录数据、训练和部署的工作流；模型结构及参数更新属于算法层。",
+        "sources": [
+          "https://huggingface.co/docs/lerobot/main/en/index"
+        ],
+        "status": "待核实",
+        "x": 780,
+        "y": 150
+      },
+      {
+        "id": "app-sim-real",
+        "title": "Sim-to-Real 差距",
+        "kind": "落地问题",
+        "lens": "domain",
+        "summary": "仿真中完成任务，实机在相同目标下仍可能失败。",
+        "body": "Sim-to-Real 指在仿真中形成的能力迁移到真实设备和环境。差距来自视觉外观、物体表面、接触与摩擦、传感器误差、控制时延以及人的临场行为。应用侧应把失败记录成“任务—场景—对象—设备—可复现现象”，据此区分感知、操作、时序和流程问题。领域随机化通过改变仿真参数提高对变化的适应性；实机测试仍是检验迁移效果的必要环节。",
+        "sources": [
+          "https://arxiv.org/abs/1703.06907"
+        ],
+        "status": "待核实",
+        "x": 760,
+        "y": 420
+      },
+      {
+        "id": "app-handover",
+        "title": "人工接管与任务恢复",
+        "kind": "应用方法",
+        "lens": "domain",
+        "summary": "当自主执行失去把握时，明确何时交给人、怎样安全继续。",
+        "body": "应用设计要写清触发条件、操作者能看到的信息、接管方式和恢复步骤。例如抓取对象被人移走后，可以暂停、重新观察或请求人工确认，不能继续执行旧位置的动作。不同载体和场景会改变交接要求。可练习：为抓放失败画一张“继续—重试—接管—停止”的判断图，并说明每条分支需要什么现场证据。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/performance-human-robot-interaction"
+        ],
+        "status": "待核实",
+        "x": 430,
+        "y": 510
+      },
+      {
+        "id": "app-product-fit",
+        "title": "载体与末端工具适配",
+        "kind": "产品设计",
+        "lens": "domain",
+        "summary": "根据任务环境选择机器人形态和接触物体的工具。",
+        "body": "具身产品可以是固定机械臂、轮式或履带平台、空中与水下设备，也可以是人形机器人。载体决定能到哪里，末端工具决定能怎样接触对象。选型时同时看工作空间、地面与通道、负载、对象材质、供电、维护和人员协作。固定机械臂适合位置稳定、节拍明确的工位；移动操作平台能跨工位工作，但还要处理定位、通行和续航。夹爪、吸盘和专用工具面对柔软、易碎或不规则物体时的适用性也不同。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 500
+      },
+      {
+        "id": "app-users",
+        "title": "现场使用者与领域专家",
+        "kind": "生态参与者",
+        "lens": "ecology",
+        "summary": "实际使用者提出任务，也提供设备表现是否有用的证据。",
+        "body": "应用生态中的使用者、现场操作员、领域专家、产品方、系统集成方和测试方承担不同工作。以应急机器人为例，救援人员描述危险环境中的任务和操作限制，产品方据此设计载体与交互方式，集成方连接设备和现场系统，测试方建立可重复的能力测量。生态地图应画清“谁提供需求、谁提供资源、谁检验结果”的具体关系。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 140,
+        "y": 100
+      },
+      {
+        "id": "app-embodiedrag",
+        "title": "EmbodiedRAG 研究",
+        "kind": "代表成果",
+        "lens": "ecology",
+        "summary": "一项从动态三维场景图检索任务相关信息的研究。",
+        "body": "该论文提出按任务检索三维场景子图，服务于语言驱动的机器人规划；它为领域地图中的“场景检索增强”提供具体研究入口。阅读时先确认论文使用的场景、载体和评测设置，再判断哪些思路可能用于本组选题。本文在图谱中是待阅读、待核实的资源入口，不能写成本组已经复现的成果。",
+        "sources": [
+          "https://arxiv.org/abs/2410.23968"
+        ],
+        "status": "待核实",
+        "x": 570,
+        "y": 100
+      },
+      {
+        "id": "app-nist-tests",
+        "title": "NIST 机器人性能测试资源",
+        "kind": "评测资源",
+        "lens": "ecology",
+        "summary": "用任务要求组织机器人能力测试的公开研究入口。",
+        "body": "NIST 的应急机器人项目讨论移动、操作、传感、通信、人机界面等测试维度，覆盖地面、水面和小型空中设备。它可帮助理解应用需求怎样转成可比较的测试，并连接到领域地图中的载体选择和认知地图中的评测设计。具体测试方法是否适合本组任务，需要读原始材料后判断。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/department-homeland-security-response-robot-performance-standards"
+        ],
+        "status": "待核实",
+        "x": 430,
+        "y": 400
+      },
+      {
+        "id": "app-evaluation",
+        "title": "从任务要求设计评测",
+        "kind": "分析方法",
+        "lens": "cognition",
+        "summary": "先明确成功条件，再决定要记录哪些失败和人工干预。",
+        "body": "教学示例：比较两种桌面抓放方案时，固定目标物、初始位置和测试次数，分别记录完成率、耗时、重试和人工接管。单次演示不能推出稳定性；仿真成绩也不能替代现场结果。NIST 的机器人测量工作以应用要求推动指标设计。本组尚未开展上述比较，下一步可先写一页测试计划，待有真实记录后再形成判断。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/measurement-science-robotics-and-autonomous-systems-program"
+        ],
+        "status": "待核实",
+        "x": 120,
+        "y": 100
+      },
+      {
+        "id": "app-gap-check",
+        "title": "仿真到现场的失败归因",
+        "kind": "分析方法",
+        "lens": "cognition",
+        "summary": "把失败定位到可检查的条件，避免只说“模型不行”。",
+        "body": "教学分析框架：先记录任务、设备、软件版本和复现步骤，再分别检查视觉输入、接触物理、动作时延和现场流程；每次只改变一项条件。若发现视觉识别在反光物体上失效，应把结论限定在该条件，不能推断所有实机任务都会失败。此卡是未来实践的记录方法，不是本组已有实验结论。",
+        "sources": [
+          "https://arxiv.org/abs/1703.06907",
+          "https://www.nist.gov/programs-projects/measurement-science-robotics-and-autonomous-systems-program"
+        ],
+        "status": "待核实",
+        "x": 610,
+        "y": 150
+      },
+      {
+        "id": "app-learning",
+        "title": "应用方向的学习计划",
+        "kind": "学习规划",
+        "lens": "cognition",
+        "summary": "从兴趣、现有能力和可获得的机会出发，选择下一项可完成的任务。",
+        "body": "填写框架：我想理解哪一种具身任务？现在能解释哪些概念、完成哪些小练习？还缺场景表示、数据采集、系统集成或评测中的哪一项？有哪些课程、官方文档或实践机会可用？下一步准备交付什么可检查的成果？教学示例：先写桌面抓放的任务边界，再阅读一份场景检索论文并设计核验流程。课程对应关系须依据适用年级的培养方案或课程大纲核实；个人经历、已读材料和能力进展待本人填写。",
+        "sources": [],
+        "status": "待核实",
+        "x": 390,
+        "y": 430
+      },
+      {
+        "id": "app-affordance",
+        "title": "可供性与动作条件",
+        "kind": "核心概念",
+        "lens": "domain",
+        "summary": "识别物体之后，还要判断它在当前任务中允许怎样被操作。",
+        "body": "可供性（affordance）描述对象、机器人能力与任务之间的可行动关系。同一个杯子可以被抓起、推开或作为容器使用，但能否抓杯沿取决于杯沿形状、夹爪尺寸、装载状态和安全要求。“看见杯子”只是目标识别；“从哪里抓、抓后会怎样”才进入动作条件判断。应用设计需要把目标、可接触部位、禁区与操作后的预期状态一起交给执行系统。",
+        "sources": [
+          "https://arxiv.org/abs/2404.11000"
+        ],
+        "status": "待核实",
+        "x": 250,
+        "y": 250
+      },
+      {
+        "id": "app-open-vocabulary",
+        "title": "开放词汇目标定位",
+        "kind": "核心概念",
+        "lens": "domain",
+        "summary": "让机器人根据自然语言寻找未列入固定类别表的对象。",
+        "body": "固定类别检测器只能识别预先定义的标签；开放词汇目标定位允许使用“红色保温杯”“桌上能盛水的容器”等表达寻找候选对象。应用上要区分语言匹配、空间定位和操作可行性三个环节：找到符合描述的区域，不等于已获得可抓取姿态。遇到多个相似对象时，应结合位置、属性和用户确认消歧。OK-Robot 展示了把开放知识模型与移动抓取流程接起来的系统案例。",
+        "sources": [
+          "https://arxiv.org/abs/2401.12202"
+        ],
+        "status": "待核实",
+        "x": 590,
+        "y": 270
+      },
+      {
+        "id": "app-data-coverage",
+        "title": "示教数据覆盖",
+        "kind": "数据方法",
+        "lens": "domain",
+        "summary": "用场景变化矩阵检查示教是否足以代表实际任务。",
+        "body": "一条成功示教只证明某次动作可行。面向特定任务采集数据时，应列出对象、摆放、光照、背景、遮挡和失败恢复等变化轴，记录每条示教的条件与结果，再保留未见过的组合用于验收。DROID 的跨场景机器人操作数据说明，环境和任务多样性本身就是数据资源；应用侧更需要回答自己的目标场景缺了哪些样本，以及哪些长尾情况需要单独测试。",
+        "sources": [
+          "https://arxiv.org/abs/2403.12945"
+        ],
+        "status": "待核实",
+        "x": 810,
+        "y": 290
+      },
+      {
+        "id": "app-long-horizon",
+        "title": "长程任务与子任务衔接",
+        "kind": "落地问题",
+        "lens": "domain",
+        "summary": "多步任务的难点是让前一步结果可靠地成为下一步条件。",
+        "body": "整理餐桌、收纳物品或处理现场设备都包含观察、移动、操作和检查等子任务。任何一步失败都可能改变后续前提，因此长程任务需要明确前置条件、完成判据、状态更新和恢复入口。将“拿起杯子—移动到水池—放下杯子”拆开后，还要验证杯子是否真的被拿起、路径是否可通行、放下后是否稳定。BEHAVIOR-1K 以人们实际需要的日常活动组织长程移动操作任务。",
+        "sources": [
+          "https://behavior.stanford.edu/"
+        ],
+        "status": "待核实",
+        "x": 820,
+        "y": 560
+      },
+      {
+        "id": "app-droid",
+        "title": "DROID 机器人操作数据集",
+        "kind": "数据资源",
+        "lens": "ecology",
+        "summary": "跨地点、场景和任务采集的真实机器人操作示教资源。",
+        "body": "DROID 由多个采集者在不同地点记录机器人操作轨迹，并公开数据和配套资源。它连接数据采集者、机器人平台、训练研究者与应用评测者。应用侧使用时应先核对设备、动作空间、任务对象和许可条件，再判断哪些片段与目标场景相近；其价值还在于展示数据集如何记录环境差异，而不只是提供大量轨迹。",
+        "sources": [
+          "https://arxiv.org/abs/2403.12945"
+        ],
+        "status": "待核实",
+        "x": 210,
+        "y": 260
+      },
+      {
+        "id": "app-behavior",
+        "title": "BEHAVIOR-1K 日常任务基准",
+        "kind": "任务资源",
+        "lens": "ecology",
+        "summary": "把真实生活需求转成可定义、可比较的具身任务集合。",
+        "body": "BEHAVIOR-1K 从人们希望机器人协助完成的活动出发，提供日常任务定义和交互式仿真环境。它连接用户需求、对象状态、场景资源与任务评测，适合观察多步骤任务如何被拆解和验收。其任务覆盖家庭生活，迁移到医疗、工业、农业或应急领域时，需要重新定义现场对象和成功条件。",
+        "sources": [
+          "https://behavior.stanford.edu/"
+        ],
+        "status": "待核实",
+        "x": 650,
+        "y": 300
+      },
+      {
+        "id": "app-requirements",
+        "title": "从使用需求到验收标准",
+        "kind": "分析方法",
+        "lens": "cognition",
+        "summary": "把“机器人要好用”改写成可以观察和比较的任务条件。",
+        "body": "先访谈使用者，记录任务频率、物体与环境变化、容许耗时、人工介入和失败代价；再把每项需求映射到测试情形与指标。例如“夜间也能巡检”至少需要界定照明范围、目标类型、异常报告方式和成功判据。需求、设计选择和测试证据应能相互追溯：若测试未覆盖某个条件，就不能把该条件算作已验收。",
+        "sources": [
+          "https://www.nist.gov/programs-projects/measurement-science-robotics-and-autonomous-systems-program"
+        ],
+        "status": "待核实",
+        "x": 300,
+        "y": 270
+      },
+      {
+        "id": "app-evidence-update",
+        "title": "证据驱动的认识更新",
+        "kind": "判断方法",
+        "lens": "cognition",
+        "summary": "记录原先判断、改变判断的证据，以及新判断的适用范围。",
+        "body": "认知地图不仅列“学过什么”，还展示判断怎样改变。示例：原先以为目标识别准确就足以完成抓取；读到开放词汇移动操作系统并拆解任务后，发现定位、移动、抓取和放置各有失败入口，因此改用端到端任务成功率和分阶段失败记录评价方案。这个示例是一条可复用的分析路径，个人的真实认识变化应在阅读或实践后写入具体日期、材料和证据。",
+        "sources": [
+          "https://arxiv.org/abs/2401.12202"
+        ],
+        "status": "待核实",
+        "x": 720,
+        "y": 320
+      },
+      {
+        "id": "infra-stack",
+        "title": "AI Infra · 实时推理系统",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "把视觉模型变成可测量、可部署、可持续运行的机器人能力。",
+        "body": "AI Infra 连接模型、运行时、算力和控制系统。主线不是只比较模型推理速度，而是明确一次观测何时产生、何时被处理、动作何时执行。应同时记录任务成功率、端到端延迟、长尾抖动与内存条件。本组卡片为学习框架，不代表已完成设备实验。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 100
+      },
+      {
+        "id": "infra-e2e",
+        "title": "端到端延迟预算",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "拆分采集、预处理、排队、推理、传输和动作执行耗时。",
+        "body": "模型耗时只是闭环的一段。给各阶段输入输出加时间戳，明确异步流水线与时钟同步边界。报告测量对象、设备、模型版本、精度、预热和样本量；均值无法代替截止时间的满足程度。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 300,
+        "y": 100
+      },
+      {
+        "id": "infra-memory",
+        "title": "显存与内存预算",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "权重、激活、运行时工作区和并发会共同占用内存。",
+        "body": "先测量峰值及稳定态，再比较输入分辨率、batch、精度和模型变更。模型能加载不代表能在目标并发下稳定推理。设备型号、功耗模式及其他进程是实验条件，不能省略。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 500,
+        "y": 100
+      },
+      {
+        "id": "infra-precision",
+        "title": "低精度与量化取舍",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "用精度和任务表现验证换取的时延及内存收益。",
+        "body": "FP16、INT8 等配置的收益依赖设备、算子支持和转换流程。量化需要按工具要求准备代表性数据与验证；不能以参数更少或位宽更低直接推断控制成功率提高。先跑同条件基线，再比较误差、速度、内存和失败类型。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 100
+      },
+      {
+        "id": "infra-scheduling",
+        "title": "排队与批处理调度",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "吞吐最大化和单次控制请求的低延迟可能冲突。",
+        "body": "动态 batching 通过等待更多请求提升吞吐，等待也会消耗延迟预算。Triton 文档建议用性能分析工具比较 batch 与排队时间配置。机器人控制需要先说明请求频率、时效和截止时间，再选调度策略，不照搬服务端吞吐参数。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 900,
+        "y": 100
+      },
+      {
+        "id": "infra-jitter",
+        "title": "实时性与长尾抖动",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "稳定满足时间约束，需要观察最慢情况和调度行为。",
+        "body": "实时性关注截止时间而不只是“运行很快”。内存分配、阻塞和执行调度可能引入不可预测的等待。记录延迟分布和超时比例；对超时、旧观测和设备故障定义应用层降级与停止策略。",
+        "sources": [
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 1100,
+        "y": 100
+      },
+      {
+        "id": "infra-benchmark",
+        "title": "可复现的推理评测",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "固定硬件、模型、输入、精度、预热与测量边界。",
+        "body": "将首次加载、预热、稳定推理分开，报告样本量和测量方法。离线 benchmark 和在线闭环实验分别回答性能与任务可靠性问题。没有同条件基线，不把某工具宣称的加速倍数当成项目结论。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 1300,
+        "y": 100
+      },
+      {
+        "id": "infra-tensorrt",
+        "title": "TensorRT · 推理优化运行时",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "核查模型转换、设备支持、精度及性能测量条件。",
+        "body": "官方最佳实践提供性能基线、内存预算与推理优化入口。是否适用于本项目，取决于目标硬件、模型算子、转换链路和验证结果。不是所有模型在所有设备上都自动加速。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 400
+      },
+      {
+        "id": "infra-triton",
+        "title": "Triton · 推理服务与调度",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "用模型实例与调度配置组织推理请求。",
+        "body": "以动态 batching 文档为起点，理解并发、批大小、排队延迟和吞吐的关系。它是部署候选工具，不意味着机器人必须把控制请求发送到远程推理服务。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 400,
+        "y": 400
+      },
+      {
+        "id": "infra-ros",
+        "title": "ROS 2 · 实时系统学习入口",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "从截止时间、阻塞与内存分配学习实时设计约束。",
+        "body": "ROS 2 实时编程教程用于理解系统层影响，不等于安装 ROS 2 就获得硬实时保证。应结合操作系统、执行器、驱动和硬件平台验证。",
+        "sources": [
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 400
+      },
+      {
+        "id": "infra-speed-question",
+        "title": "模型更快，闭环一定更可靠吗？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "同时比较推理加速、延迟分布和任务成功率。",
+        "body": "假设：优化运行时减少推理耗时后，闭环可能受益。待验证：采集、队列、传输或动作是否成为主瓶颈？控制其他条件，分别记录分阶段耗时、总时延和任务失败。不能用一次离线测速证明因果。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 700
+      },
+      {
+        "id": "infra-batch-question",
+        "title": "吞吐提升是否牺牲控制时效？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "检查 batch 等待是否让输入观测在执行时已经过期。",
+        "body": "比较禁用批处理和不同等待配置；记录吞吐、排队时间、长尾延迟、超时与任务成功率。接受哪种取舍应由任务的截止时间和错误后果决定，不由单一吞吐指标决定。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 400,
+        "y": 700
+      },
+      {
+        "id": "infra-budget-question",
+        "title": "如何定义设备上的可部署性？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "从能加载模型，走向可持续运行和可复现实验。",
+        "body": "在目标设备上记录峰值内存、功耗与温度条件、延迟分布和任务结果；验证持续运行及异常恢复。只有在明确资源与任务约束后，才能判断方案是否可部署。本项目尚未给出实测结论。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 700
+      }
+    ],
+    "relations": [
+      {
+        "id": "r1",
+        "source": "vision",
+        "target": "task",
+        "label": "提供感知",
+        "reason": "抓放任务需要获取目标与环境信息。"
+      },
+      {
+        "id": "r2",
+        "source": "latency",
+        "target": "task",
+        "label": "形成时间约束",
+        "reason": "观测与动作之间的等待可能影响任务；具体影响需要实验。"
+      },
+      {
+        "id": "r3",
+        "source": "feedback",
+        "target": "task",
+        "label": "支持修正",
+        "reason": "后续观测用于调整执行。"
+      },
+      {
+        "id": "r4",
+        "source": "course",
+        "target": "vision",
+        "label": "提供学习入口",
+        "reason": "课程对应关系待依据培养方案核查。"
+      },
+      {
+        "id": "r5",
+        "source": "lerobot",
+        "target": "libero",
+        "label": "提供集成入口",
+        "reason": "参见 LeRobot 的 LIBERO 文档，使用前核查版本与条件。"
+      },
+      {
+        "id": "r6",
+        "source": "infra",
+        "target": "lerobot",
+        "label": "约束运行",
+        "reason": "策略运行需要匹配硬件与软件环境。"
+      },
+      {
+        "id": "r7",
+        "source": "lerobot",
+        "target": "task",
+        "label": "候选实现工具",
+        "reason": "是否用于该具体任务尚待验证。"
+      },
+      {
+        "id": "r8",
+        "source": "infra",
+        "target": "latency",
+        "label": "影响指标",
+        "reason": "设备和推理配置会影响耗时。"
+      },
+      {
+        "id": "r9",
+        "source": "question",
+        "target": "latency",
+        "label": "检验影响",
+        "reason": "研究问题将延迟与任务表现联系起来。"
+      },
+      {
+        "id": "r10",
+        "source": "comparison",
+        "target": "question",
+        "label": "组织验证",
+        "reason": "避免多个变量同时变化导致归因困难。"
+      },
+      {
+        "id": "r11",
+        "source": "experiment",
+        "target": "question",
+        "label": "提供证据",
+        "reason": "这是待执行的证据收集计划，并非已有结论。"
+      },
+      {
+        "id": "r12",
+        "source": "experiment",
+        "target": "libero",
+        "label": "候选实验环境",
+        "reason": "待完成兼容性与资源验证。"
+      },
+      {
+        "id": "app-r1",
+        "source": "task",
+        "target": "app-boundary",
+        "label": "用来界定",
+        "reason": "桌面抓放是说明任务对象、现场条件和成功标准的教学例子。"
+      },
+      {
+        "id": "app-r2",
+        "source": "app-boundary",
+        "target": "app-scene-rag",
+        "label": "限定检索任务",
+        "reason": "检索哪些场景信息，应由任务和运行条件决定。"
+      },
+      {
+        "id": "app-r3",
+        "source": "app-boundary",
+        "target": "app-specialized-training",
+        "label": "提出数据需求",
+        "reason": "任务中的对象和环境变化决定示教与测试需要覆盖什么。"
+      },
+      {
+        "id": "app-r4",
+        "source": "app-boundary",
+        "target": "app-sim-real",
+        "label": "确定现场条件",
+        "reason": "比较仿真和实机结果前，应明确两边任务条件。"
+      },
+      {
+        "id": "app-r5",
+        "source": "app-boundary",
+        "target": "app-product-fit",
+        "label": "约束产品选择",
+        "reason": "载体和末端工具需要匹配任务空间、对象和操作方式。"
+      },
+      {
+        "id": "app-r6",
+        "source": "app-boundary",
+        "target": "app-handover",
+        "label": "界定接管时机",
+        "reason": "超出任务或能力边界时，需要预先定义暂停和人工介入方式。"
+      },
+      {
+        "id": "app-r7",
+        "source": "app-scene-rag",
+        "target": "app-embodiedrag",
+        "label": "研究入口",
+        "reason": "EmbodiedRAG 讨论为机器人任务检索动态三维场景子图。"
+      },
+      {
+        "id": "app-r8",
+        "source": "app-embodiedrag",
+        "target": "app-learning",
+        "label": "提供阅读材料",
+        "reason": "阅读原论文后可记录其任务、证据和与本组选题的关系。"
+      },
+      {
+        "id": "app-r9",
+        "source": "app-specialized-training",
+        "target": "lerobot",
+        "label": "了解工作流",
+        "reason": "LeRobot 文档展示示教采集、数据集、策略训练和部署的基本环节。"
+      },
+      {
+        "id": "app-r10",
+        "source": "app-product-fit",
+        "target": "app-nist-tests",
+        "label": "查找测试维度",
+        "reason": "NIST 资源按任务讨论不同载体的能力与评测。"
+      },
+      {
+        "id": "app-r11",
+        "source": "app-nist-tests",
+        "target": "app-evaluation",
+        "label": "支持指标设计",
+        "reason": "评测资源可帮助把任务要求转成可观察的测试指标。"
+      },
+      {
+        "id": "app-r12",
+        "source": "app-sim-real",
+        "target": "app-gap-check",
+        "label": "组织失败归因",
+        "reason": "现场差距需要按可复现条件逐项检查。"
+      },
+      {
+        "id": "app-r13",
+        "source": "app-boundary",
+        "target": "app-evaluation",
+        "label": "定义成功条件",
+        "reason": "评测指标必须对应任务目标和运行边界。"
+      },
+      {
+        "id": "app-r14",
+        "source": "app-handover",
+        "target": "app-users",
+        "label": "需要现场参与",
+        "reason": "接管规则应结合实际操作者能看到的信息与操作能力。"
+      },
+      {
+        "id": "app-r15",
+        "source": "app-users",
+        "target": "app-evaluation",
+        "label": "提供任务要求",
+        "reason": "现场使用者的工作要求应进入测试条件和评价指标。"
+      },
+      {
+        "id": "app-r16",
+        "source": "app-open-vocabulary",
+        "target": "app-affordance",
+        "label": "从定位走向操作",
+        "reason": "找到候选对象后还需判断可接触部位和动作条件。"
+      },
+      {
+        "id": "app-r17",
+        "source": "app-boundary",
+        "target": "app-affordance",
+        "label": "限定允许动作",
+        "reason": "任务与安全边界决定对象可以怎样被操作。"
+      },
+      {
+        "id": "app-r18",
+        "source": "app-specialized-training",
+        "target": "app-data-coverage",
+        "label": "要求覆盖变化",
+        "reason": "专门训练的数据应覆盖目标任务中的关键变化。"
+      },
+      {
+        "id": "app-r19",
+        "source": "app-data-coverage",
+        "target": "app-droid",
+        "label": "参考真实数据",
+        "reason": "DROID 展示跨场景操作数据的采集组织方式。"
+      },
+      {
+        "id": "app-r20",
+        "source": "app-long-horizon",
+        "target": "app-behavior",
+        "label": "使用任务资源",
+        "reason": "BEHAVIOR-1K 提供多步日常活动的任务定义与场景。"
+      },
+      {
+        "id": "app-r21",
+        "source": "app-long-horizon",
+        "target": "app-handover",
+        "label": "需要异常恢复",
+        "reason": "子任务失败时应有明确的暂停、重试或交接入口。"
+      },
+      {
+        "id": "app-r22",
+        "source": "app-users",
+        "target": "app-requirements",
+        "label": "提供使用需求",
+        "reason": "任务频率、环境限制和失败代价应来自具体使用情境。"
+      },
+      {
+        "id": "app-r23",
+        "source": "app-requirements",
+        "target": "app-evaluation",
+        "label": "形成验收指标",
+        "reason": "每项需求需对应可观察的测试情形与判据。"
+      },
+      {
+        "id": "app-r24",
+        "source": "app-open-vocabulary",
+        "target": "app-evidence-update",
+        "label": "促使修正判断",
+        "reason": "系统案例表明目标定位只是任务链的一环。"
+      },
+      {
+        "id": "app-r25",
+        "source": "app-evaluation",
+        "target": "app-evidence-update",
+        "label": "提供判断证据",
+        "reason": "分阶段测试结果可以支持或推翻原先认识。"
+      },
+      {
+        "id": "infra-rel-task",
+        "source": "task",
+        "target": "infra-stack",
+        "label": "依赖运行基础设施",
+        "reason": "机器人视觉能力需要在目标算力和时间预算下运行。"
+      },
+      {
+        "id": "infra-rel-core-0",
+        "source": "infra-stack",
+        "target": "infra-e2e",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-1",
+        "source": "infra-stack",
+        "target": "infra-memory",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-2",
+        "source": "infra-stack",
+        "target": "infra-precision",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-3",
+        "source": "infra-stack",
+        "target": "infra-scheduling",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-4",
+        "source": "infra-stack",
+        "target": "infra-jitter",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-5",
+        "source": "infra-stack",
+        "target": "infra-benchmark",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-latency",
+        "source": "infra-e2e",
+        "target": "latency",
+        "label": "区分测量边界",
+        "reason": "模型推理耗时不能直接替代端到端延迟。"
+      },
+      {
+        "id": "infra-rel-device",
+        "source": "infra",
+        "target": "infra-memory",
+        "label": "约束资源预算",
+        "reason": "设备和运行环境决定可用内存及部署条件。"
+      },
+      {
+        "id": "infra-rel-feedback",
+        "source": "infra-jitter",
+        "target": "feedback",
+        "label": "影响闭环时效",
+        "reason": "不稳定等待可能影响反馈与动作的时效，需要实验。"
+      },
+      {
+        "id": "infra-rel-precision-tool",
+        "source": "infra-precision",
+        "target": "infra-tensorrt",
+        "label": "候选优化工具",
+        "reason": "通过官方文档核查精度配置与模型转换。"
+      },
+      {
+        "id": "infra-rel-benchmark-tool",
+        "source": "infra-benchmark",
+        "target": "infra-tensorrt",
+        "label": "提供评测入口",
+        "reason": "工具能力需在相同实验条件下验证。"
+      },
+      {
+        "id": "infra-rel-schedule-tool",
+        "source": "infra-scheduling",
+        "target": "infra-triton",
+        "label": "提供调度机制",
+        "reason": "批处理等待和吞吐取舍可从动态调度文档学习。"
+      },
+      {
+        "id": "infra-rel-jitter-tool",
+        "source": "infra-jitter",
+        "target": "infra-ros",
+        "label": "提供实时编程入口",
+        "reason": "学习阻塞、内存分配和调度对时间约束的影响。"
+      },
+      {
+        "id": "infra-rel-speed-q",
+        "source": "infra-e2e",
+        "target": "infra-speed-question",
+        "label": "提出验证问题",
+        "reason": "比较离线推理耗时与闭环成功率的关系。"
+      },
+      {
+        "id": "infra-rel-batch-q",
+        "source": "infra-scheduling",
+        "target": "infra-batch-question",
+        "label": "检验排队代价",
+        "reason": "吞吐提升的同时需核验控制时效。"
+      },
+      {
+        "id": "infra-rel-budget-q",
+        "source": "infra-memory",
+        "target": "infra-budget-question",
+        "label": "定义部署验收",
+        "reason": "内存、时延与持续运行共同约束可部署性。"
+      },
+      {
+        "id": "infra-rel-existing-q",
+        "source": "infra-speed-question",
+        "target": "question",
+        "label": "细化已有研究问题",
+        "reason": "用系统分阶段测量解释更快是否更可靠。"
+      },
+      {
+        "id": "infra-rel-experiment",
+        "source": "infra-benchmark",
+        "target": "experiment",
+        "label": "要求保留实验记录",
+        "reason": "记录环境、模型和失败配置以支持复现。"
+      }
+    ],
+    "draft": null,
+    "feedback": [],
+    "revisions": []
+  },
+  "prInfra": {
+    "infraNodes": [
+      {
+        "id": "infra-async",
+        "title": "异步推理与动作队列",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "让下一段动作的计算与当前动作的执行并行，并检查观测与动作的时效。",
+        "body": "同步执行可能在等待推理时暂停；异步执行把动作预测和执行解耦，客户端消费动作队列时计算下一段动作。需记录观测时间戳、动作片段覆盖时长、推理及通信耗时、队列余量和动作更新方式。并行不保证队列永不耗尽，也不保证旧动作适用于变化后的现场；应定义超时、过期动作与失联时的暂停或接管规则。LeRobot 官方 2025-07-10 文章提供一个实现案例，不代表所有策略支持同一接口或本组已验证收益。具体接口以选定版本为准。",
+        "sources": [
+          "https://huggingface.co/blog/async-robot-inference",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 1500,
+        "y": 100
+      },
+      {
+        "id": "infra-stack",
+        "title": "AI Infra · 实时推理系统",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "把视觉模型变成可测量、可部署、可持续运行的机器人能力。",
+        "body": "AI Infra 连接模型、运行时、算力和控制系统。主线不是只比较模型推理速度，而是明确一次观测何时产生、何时被处理、动作何时执行。应同时记录任务成功率、端到端延迟、长尾抖动与内存条件。本组卡片为学习框架，不代表已完成设备实验。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 100
+      },
+      {
+        "id": "infra-e2e",
+        "title": "端到端延迟预算",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "拆分采集、预处理、排队、推理、传输和动作执行耗时。",
+        "body": "模型耗时只是闭环的一段。给各阶段输入输出加时间戳，明确异步流水线与时钟同步边界。报告测量对象、设备、模型版本、精度、预热和样本量；均值无法代替截止时间的满足程度。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 300,
+        "y": 100
+      },
+      {
+        "id": "infra-memory",
+        "title": "显存与内存预算",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "权重、激活、运行时工作区和并发会共同占用内存。",
+        "body": "先测量峰值及稳定态，再比较输入分辨率、batch、精度和模型变更。模型能加载不代表能在目标并发下稳定推理。设备型号、功耗模式及其他进程是实验条件，不能省略。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 500,
+        "y": 100
+      },
+      {
+        "id": "infra-precision",
+        "title": "低精度与量化取舍",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "用精度和任务表现验证换取的时延及内存收益。",
+        "body": "FP16、INT8 等配置的收益依赖设备、算子支持和转换流程。量化需要按工具要求准备代表性数据与验证；不能以参数更少或位宽更低直接推断控制成功率提高。先跑同条件基线，再比较误差、速度、内存和失败类型。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 100
+      },
+      {
+        "id": "infra-scheduling",
+        "title": "排队与批处理调度",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "吞吐最大化和单次控制请求的低延迟可能冲突。",
+        "body": "动态 batching 通过等待更多请求提升吞吐，等待也会消耗延迟预算。Triton 文档建议用性能分析工具比较 batch 与排队时间配置。机器人控制需要先说明请求频率、时效和截止时间，再选调度策略，不照搬服务端吞吐参数。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 900,
+        "y": 100
+      },
+      {
+        "id": "infra-jitter",
+        "title": "实时性与长尾抖动",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "稳定满足时间约束，需要观察最慢情况和调度行为。",
+        "body": "实时性关注截止时间而不只是“运行很快”。内存分配、阻塞和执行调度可能引入不可预测的等待。记录延迟分布、P95/P99 和超时比例；这些统计量不能单独证明最坏情况上界或硬实时保证。对超时、旧观测和设备故障定义应用层降级与停止策略。",
+        "sources": [
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 1100,
+        "y": 100
+      },
+      {
+        "id": "infra-benchmark",
+        "title": "可复现的推理评测",
+        "lens": "domain",
+        "kind": "AI Infra",
+        "summary": "固定硬件、模型、输入、精度、预热与测量边界。",
+        "body": "将首次加载、预热、稳定推理分开，报告样本量和测量方法。离线 benchmark 和在线闭环实验分别回答性能与任务可靠性问题。没有同条件基线，不把某工具宣称的加速倍数当成项目结论。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 1300,
+        "y": 100
+      },
+      {
+        "id": "infra-tensorrt",
+        "title": "TensorRT · 推理优化运行时",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "核查模型转换、设备支持、精度及性能测量条件。",
+        "body": "官方最佳实践提供性能基线、内存预算与推理优化入口。是否适用于本项目，取决于目标硬件、模型算子、转换链路和验证结果。不是所有模型在所有设备上都自动加速。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 400
+      },
+      {
+        "id": "infra-triton",
+        "title": "Triton · 推理服务与调度",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "用模型实例与调度配置组织推理请求。",
+        "body": "以动态 batching 文档为起点，理解并发、批大小、排队延迟和吞吐的关系。它是部署候选工具，不意味着机器人必须把控制请求发送到远程推理服务。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 400,
+        "y": 400
+      },
+      {
+        "id": "infra-ros",
+        "title": "ROS 2 · 实时系统学习入口",
+        "lens": "ecology",
+        "kind": "Infra 工具资源",
+        "summary": "从截止时间、阻塞与内存分配学习实时设计约束。",
+        "body": "ROS 2 实时编程教程用于理解系统层影响，不等于安装 ROS 2 就获得硬实时保证。应结合操作系统、执行器、驱动和硬件平台验证。",
+        "sources": [
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 400
+      },
+      {
+        "id": "infra-speed-question",
+        "title": "模型更快，闭环一定更可靠吗？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "同时比较推理加速、延迟分布和任务成功率。",
+        "body": "当前判断：模型更快可能有益，但不充分保证闭环可靠。依据：端到端流程还包含采集、排队、通信和执行；官方运行时与实时编程资料提供测量和约束的背景，并非本组因果实验。未知：具体任务的瓶颈和时效要求。验证计划：固定任务、策略、设备及环境，比较分阶段耗时、总时延、超时和成功率。修正条件：若推理加速后总时延或成功率无改善，应调整瓶颈判断。尚无本组实测结果。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 100,
+        "y": 700
+      },
+      {
+        "id": "infra-batch-question",
+        "title": "吞吐提升是否牺牲控制时效？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "检查 batch 等待是否让输入观测在执行时已经过期。",
+        "body": "当前判断：吞吐提升可能付出排队等待代价，是否可接受取决于任务时效。依据：Triton 动态批处理文档说明批大小与排队等待配置。未知：本任务请求频率、可容忍观测年龄和截止时间。验证计划：比较禁用批处理及不同等待配置，记录吞吐、排队、P95/P99、超时和成功率。修正条件：若目标配置在任务截止时间内提高吞吐且不损害任务表现，则可接受该配置；不能推广至所有负载。尚未执行本组实验。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/batcher.html"
+        ],
+        "status": "待核实",
+        "x": 400,
+        "y": 700
+      },
+      {
+        "id": "infra-budget-question",
+        "title": "如何定义设备上的可部署性？",
+        "lens": "cognition",
+        "kind": "Infra 研究问题",
+        "summary": "从能加载模型，走向可持续运行和可复现实验。",
+        "body": "当前判断：能加载模型只是必要检查之一，可部署性还取决于时间、资源和任务约束。依据：运行时性能资料与 ROS 2 实时教程提供资源及时间约束背景，不构成目标设备验收。未知：目标设备、功耗模式、持续负载和可接受失败范围。验证计划：记录峰值内存、温度及功耗条件、延迟分布、任务结果，并测试持续运行和异常恢复。修正条件：若持续负载下越过预算或无法恢复，应撤回可部署判断并调整方案。本项目尚未给出实测结论。",
+        "sources": [
+          "https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html",
+          "https://docs.ros.org/en/rolling/Tutorials/Demos/Real-Time-Programming.html"
+        ],
+        "status": "待核实",
+        "x": 700,
+        "y": 700
+      }
+    ],
+    "infraRelations": [
+      {
+        "id": "infra-rel-async-core",
+        "source": "infra-stack",
+        "target": "infra-async",
+        "label": "衔接预测与执行",
+        "reason": "异步执行是候选系统方案，不是所有机器人必须采用的架构。"
+      },
+      {
+        "id": "infra-rel-async-feedback",
+        "source": "infra-async",
+        "target": "feedback",
+        "label": "约束反馈时效",
+        "reason": "依据异步推理案例，动作更新需结合新观测，检查队列和旧动作时效。"
+      },
+      {
+        "id": "infra-rel-async-resource",
+        "source": "infra-async",
+        "target": "lerobot",
+        "label": "参考异步实现",
+        "reason": "参见异步推理卡片的官方文章；接口及策略兼容性须按选定版本核实。"
+      },
+      {
+        "id": "infra-rel-boundary-budget",
+        "source": "app-boundary",
+        "target": "infra-e2e",
+        "label": "约束时间预算",
+        "reason": "工程分析建议：将任务运行条件转成可测量的时间要求，具体预算待任务验证。"
+      },
+      {
+        "id": "infra-rel-handover-timeout",
+        "source": "app-handover",
+        "target": "infra-jitter",
+        "label": "要求超时处置",
+        "reason": "工程分析建议：接管与恢复流程应覆盖超时、旧观测和失联；并非已经验证的安全保证。"
+      },
+      {
+        "id": "infra-rel-evaluation-benchmark",
+        "source": "app-evaluation",
+        "target": "infra-benchmark",
+        "label": "定义系统验收",
+        "reason": "工程分析建议：将任务验收要求对应到测量边界、负载和系统指标，仍需闭环任务评价。"
+      },
+      {
+        "id": "infra-rel-task",
+        "source": "task",
+        "target": "infra-stack",
+        "label": "依赖运行基础设施",
+        "reason": "机器人视觉能力需要在目标算力和时间预算下运行。"
+      },
+      {
+        "id": "infra-rel-core-0",
+        "source": "infra-stack",
+        "target": "infra-e2e",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-1",
+        "source": "infra-stack",
+        "target": "infra-memory",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-2",
+        "source": "infra-stack",
+        "target": "infra-precision",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-3",
+        "source": "infra-stack",
+        "target": "infra-scheduling",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-4",
+        "source": "infra-stack",
+        "target": "infra-jitter",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-core-5",
+        "source": "infra-stack",
+        "target": "infra-benchmark",
+        "label": "拆解系统约束",
+        "reason": "按测量边界、资源和时间约束逐项分析部署问题。"
+      },
+      {
+        "id": "infra-rel-latency",
+        "source": "infra-e2e",
+        "target": "latency",
+        "label": "区分测量边界",
+        "reason": "模型推理耗时不能直接替代端到端延迟。"
+      },
+      {
+        "id": "infra-rel-device",
+        "source": "infra",
+        "target": "infra-memory",
+        "label": "约束资源预算",
+        "reason": "设备和运行环境决定可用内存及部署条件。"
+      },
+      {
+        "id": "infra-rel-feedback",
+        "source": "infra-jitter",
+        "target": "feedback",
+        "label": "影响闭环时效",
+        "reason": "不稳定等待可能影响反馈与动作的时效，需要实验。"
+      },
+      {
+        "id": "infra-rel-precision-tool",
+        "source": "infra-precision",
+        "target": "infra-tensorrt",
+        "label": "候选优化工具",
+        "reason": "通过官方文档核查精度配置与模型转换。"
+      },
+      {
+        "id": "infra-rel-benchmark-tool",
+        "source": "infra-benchmark",
+        "target": "infra-tensorrt",
+        "label": "提供评测入口",
+        "reason": "工具能力需在相同实验条件下验证。"
+      },
+      {
+        "id": "infra-rel-schedule-tool",
+        "source": "infra-scheduling",
+        "target": "infra-triton",
+        "label": "提供调度机制",
+        "reason": "批处理等待和吞吐取舍可从动态调度文档学习。"
+      },
+      {
+        "id": "infra-rel-jitter-tool",
+        "source": "infra-jitter",
+        "target": "infra-ros",
+        "label": "提供实时编程入口",
+        "reason": "学习阻塞、内存分配和调度对时间约束的影响。"
+      },
+      {
+        "id": "infra-rel-speed-q",
+        "source": "infra-e2e",
+        "target": "infra-speed-question",
+        "label": "提出验证问题",
+        "reason": "比较离线推理耗时与闭环成功率的关系。"
+      },
+      {
+        "id": "infra-rel-batch-q",
+        "source": "infra-scheduling",
+        "target": "infra-batch-question",
+        "label": "检验排队代价",
+        "reason": "吞吐提升的同时需核验控制时效。"
+      },
+      {
+        "id": "infra-rel-budget-q",
+        "source": "infra-memory",
+        "target": "infra-budget-question",
+        "label": "定义部署验收",
+        "reason": "内存、时延与持续运行共同约束可部署性。"
+      },
+      {
+        "id": "infra-rel-existing-q",
+        "source": "infra-speed-question",
+        "target": "question",
+        "label": "细化已有研究问题",
+        "reason": "用系统分阶段测量解释更快是否更可靠。"
+      },
+      {
+        "id": "infra-rel-experiment",
+        "source": "infra-benchmark",
+        "target": "experiment",
+        "label": "要求保留实验记录",
+        "reason": "记录环境、模型和失败配置以支持复现。"
+      }
+    ]
+  }
+}

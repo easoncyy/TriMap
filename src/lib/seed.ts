@@ -1,3 +1,4 @@
+import {visionNodes, visionRelations} from './vision-content';
 import type {Store, KnowledgeNode} from './model';
 import {infraNodes,infraRelations} from './infra-content';
 import {applicationNodes, applicationRelations} from './application-content';
@@ -15,7 +16,8 @@ node('question','更快一定更可靠吗？','研究问题','cognition','推理
 node('comparison','控制变量比较','思考方法','cognition','固定其他条件，只改变一个明确因素。',80,350),
 node('experiment','实验与失败记录','实践案例','cognition','保留配置、输入输出、结果与异常。',650,350,'尚无真实实验结果。后续记录设备、模型版本、种子、任务、次数和失败类型，避免用演示代替评价。'),
 ...applicationNodes,
-...infraNodes
+...infraNodes,
+...visionNodes
 ],relations:[
 {id:'r1',source:'vision',target:'task',label:'提供感知',reason:'抓放任务需要获取目标与环境信息。'},
 {id:'r2',source:'latency',target:'task',label:'形成时间约束',reason:'观测与动作之间的等待可能影响任务；具体影响需要实验。'},
@@ -30,5 +32,6 @@ node('experiment','实验与失败记录','实践案例','cognition','保留配�
 {id:'r11',source:'experiment',target:'question',label:'提供证据',reason:'这是待执行的证据收集计划，并非已有结论。'},
 {id:'r12',source:'experiment',target:'libero',label:'候选实验环境',reason:'待完成兼容性与资源验证。'},
 ...applicationRelations,
-...infraRelations
+...infraRelations,
+...visionRelations
 ],draft:null,feedback:[],revisions:[]};
