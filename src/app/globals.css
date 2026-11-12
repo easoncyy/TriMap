@@ -138,3 +138,15 @@
 .studio .routing-mirror:hover .mirror-relation-name,.studio .routing-mirror.selected .mirror-relation-name{visibility:visible;opacity:1;background:#101815f5;outline:1px solid #76887988;padding:4px 6px}
 .studio .routing-mirror .mirror-fold{width:18px;height:18px;font-size:14px;line-height:16px;transform:scale(var(--label-scale,1));transform-origin:center center}
 .studio .optical-node strong{width:105px;max-width:105px;font-size:11px}
+
+/* Keep the spectrum bar focused; secondary and maintenance actions are disclosed. */
+.studio .tool-main{flex-wrap:nowrap;gap:10px;min-width:0}
+.studio .tool-main>button:first-child{margin-right:0}
+.studio .tool-search{margin-left:auto;flex:1;max-width:260px;min-width:100px}
+.studio .tool-search input{width:100%;min-width:0}
+.tool-menu{position:relative;flex-shrink:0}
+.tool-menu summary{cursor:pointer;padding:9px 12px;font-size:11px;list-style:none;border:1px solid #39432f;border-radius:4px;color:#c5ccb9}
+.tool-menu summary::-webkit-details-marker{display:none}
+.tool-menu-content{position:absolute;bottom:calc(100% + 18px);right:0;width:min(360px,85vw);max-height:55dvh;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px;background:#101410f5;border:1px solid #48513e;border-radius:8px;box-shadow:0 12px 40px #0009}
+.studio .tool-menu-content button{white-space:normal;text-align:left;justify-content:flex-start}
+@media(max-width:600px){.studio .tool-main{gap:4px}.studio .tool-search{max-width:100px}.studio .tool-main>button{white-space:nowrap}.tool-menu summary{padding:6px}}

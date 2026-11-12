@@ -1,7 +1,7 @@
 import type {KnowledgeNode,Relation} from './model';
 import type {Point} from './optics';
 import {crosses,overlaps,type Box} from './label-placement.ts';
-export const LAYOUT_VERSION=2;
+export const LAYOUT_VERSION=3;
 export function primaryTree(nodes:KnowledgeNode[],edges:Relation[],root:string){
  const ids=new Set(nodes.map(n=>n.id)),children=new Map(nodes.map(n=>[n.id,[] as string[]])),parent=new Map<string,string>(),treeEdges=new Set<string>(),depth=new Map<string,number>();
  if(!ids.has(root))return {children,parent,treeEdges,depth};
