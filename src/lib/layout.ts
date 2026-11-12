@@ -58,3 +58,18 @@ export function routeFrontiers(positions:Record<string,Point>,frontier:{edge:Rel
  }
  return result;
 }
+
+/** Extend a layout without moving any previously placed knowledge, including hidden nodes. */
+export function extendPositions(desired:Record<string,Point>,saved:Record<string,Point>){
+ const result={...saved};
+ for(const [id,wanted] of Object.entries(desired)){
+  if(result[id])continue;
+  let point={...wanted},step=0;
+  while(Object.values(result).some(p=>Math.abs(p.x-point.x)<620&&Math.abs(p.y-point.y)<360)){
+   step++;const ring=Math.ceil(step/8),angle=(step%8)*Math.PI/4;
+   point={x:wanted.x+Math.round(Math.cos(angle)*ring*700),y:wanted.y+Math.round(Math.sin(angle)*ring*520)};
+  }
+  result[id]=point;
+ }
+ return result;
+}
