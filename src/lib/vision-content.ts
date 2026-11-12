@@ -1,6 +1,6 @@
 import type {KnowledgeNode, Relation} from './model';
 
-// Vision v1.0: a pure content pack, deliberately NOT imported by seed.ts yet.
+// Vision v1.0: a pure content pack, already integrated by seed.ts.
 // External endpoints refer to the shared seed, not to branching-example.ts.
 // No database, publishing, migration, browser state or network side effects.
 // Bibliographic authors below are public research attribution, not user profiles.
