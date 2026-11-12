@@ -26,8 +26,8 @@ function boundary(node:NonNullable<ReturnType<typeof useInternalNode>>,other:Non
 
 function rayGradient(id:string,a:Point,b:Point,active:boolean,color:string){
  return <linearGradient id={id} gradientUnits="userSpaceOnUse" x1={a.x} y1={a.y} x2={b.x} y2={b.y}>
-  <stop offset="0" stopColor={color} stopOpacity={active?.22:.14}/>
-  <stop offset="1" stopColor={color} stopOpacity={active?.95:.62}/>
+  <stop offset="0" stopColor={color} stopOpacity={active?.7:.35}/>
+  <stop offset="1" stopColor={color} stopOpacity={active?1:.8}/>
  </linearGradient>;
 }
 
@@ -48,7 +48,7 @@ export default function SpectralEdge({id,source,target,data}:EdgeProps){
  const tip=direction?{x:origin.x+direction.x*300,y:origin.y+direction.y*300}:null;
  return <>
   <defs>{rayGradient(gradient,a,b,active,color)}</defs>
-  <BaseEdge id={id} path={path} interactionWidth={22} style={{stroke:`url(#${gradient})`,strokeWidth:active?1.5:1,strokeLinecap:'round'}}/>
+  <BaseEdge id={id} path={path} interactionWidth={22} style={{stroke:`url(#${gradient})`,strokeWidth:active?2:1.2,strokeLinecap:'round'}}/>
   {direction&&tip&&<g pointerEvents="none"><path d={`M${origin.x},${origin.y}L${tip.x},${tip.y}`} stroke="#dfe8dc" strokeWidth="1" opacity=".55"/><circle cx={tip.x} cy={tip.y} r="2.4" fill="#f2f1e6" opacity=".7"/></g>}
  </>;
 }

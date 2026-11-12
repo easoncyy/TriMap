@@ -1,6 +1,6 @@
 import type {KnowledgeNode,Lens,Relation} from './model';
 export type Point={x:number;y:number};
-export type Mirror={id:string;edgeId:string;position:Point;angle:number;view:string;targetId?:string};
+export type Mirror={id:string;edgeId:string;position:Point;angle:number;view:string;manual?:boolean;targetId?:string};
 export function mirrorAngle(from:Point,mirror:Point,to:Point){return (Math.atan2(mirror.y-from.y,mirror.x-from.x)+Math.atan2(to.y-mirror.y,to.x-mirror.x))*90/Math.PI;}
 export type OpticalMode='dispersion'|'refraction';
 /** Relations retain their semantic direction; light follows connectivity from the source. */

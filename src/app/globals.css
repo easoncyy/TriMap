@@ -128,3 +128,13 @@
 .studio .optical-node .node-kind{width:130px;max-width:130px;font-size:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .studio .routing-mirror .mirror-relation-name{width:110px;max-width:110px;font-size:10px!important}
 .studio .routing-mirror small{width:110px;font-size:8px}
+/* Root-to-leaf lanes reserve a bounded label block; metadata appears on demand. */
+.studio .optical-node .node-kind{display:none}
+.studio .optical-node.selected .node-kind{display:block}
+.studio .optical-node strong{width:125px;max-width:125px;font-size:12px}
+.studio .routing-mirror .mirror-relation-name{width:100px;max-width:100px;font-size:10px!important}
+/* Relation names appear at their own mirror on hover/selection, avoiding a wall of labels. */
+.studio .routing-mirror .mirror-relation-name{visibility:hidden;opacity:0;transition:opacity .12s}
+.studio .routing-mirror:hover .mirror-relation-name,.studio .routing-mirror.selected .mirror-relation-name{visibility:visible;opacity:1;background:#101815f5;outline:1px solid #76887988;padding:4px 6px}
+.studio .routing-mirror .mirror-fold{width:18px;height:18px;font-size:14px;line-height:16px;transform:scale(var(--label-scale,1));transform-origin:center center}
+.studio .optical-node strong{width:105px;max-width:105px;font-size:11px}
