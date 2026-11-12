@@ -1,0 +1,8 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {foldedView} from '../src/lib/folding.ts';
+const nodes=['a','b','c','d','e','z'].map(id=>({id,title:id,lens:'domain' as const,kind:'',summary:'',body:'',sources:[],status:'待核实' as const,x:0,y:0}));
+const edge=(id:string,source:string,target:string)=>({id,source,target,label:id,reason:''});const edges=[edge('ab','a','b'),edge('bc','b','c'),edge('cd','c','d'),edge('de','d','e')];
+test('default is at most two hops with a real frontier mirror',()=>{const v=foldedView(nodes,edges,'a');assert.deepEqual(v.nodes.map(n=>n.id),['a','b','c']);assert.deepEqual(v.frontier.map(f=>f.edge.id),['cd']);});
+test('one mirror opens one hop and closes its exclusive subtree',()=>{const v=foldedView(nodes,edges,'a',{cd:true});assert.deepEqual(v.nodes.map(n=>n.id),['a','b','c','d']);assert.deepEqual(v.frontier.map(f=>f.edge.id),['de']);assert.deepEqual(foldedView(nodes,edges,'a',{bc:false,cd:true}).nodes.map(n=>n.id),['a','b']);});
+test('cycles and shared branches retain reachable nodes without duplication',()=>{const v=foldedView(nodes,[...edges,edge('ad','a','d'),edge('ca','c','a')],'a',{bc:false});assert.equal(v.nodes.filter(n=>n.id==='c').length,1);assert.ok(v.nodes.some(n=>n.id==='d'));assert.ok(!v.nodes.some(n=>n.id==='z'));});
+
+test('a closed relation remains reopenable when an alternate route keeps both ends visible',()=>{const v=foldedView(nodes,[...edges,edge('ac','a','c')],'a',{bc:false});assert.ok(v.nodes.some(n=>n.id==='c'));assert.ok(v.frontier.some(f=>f.edge.id==='bc'));assert.ok(!v.edges.some(e=>e.id==='bc'));});

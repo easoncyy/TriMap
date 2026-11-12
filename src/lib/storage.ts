@@ -3,7 +3,6 @@ import {DatabaseSync} from 'node:sqlite';
 import {existsSync,mkdirSync,readFileSync} from 'node:fs';
 import path from 'node:path';
 import {seed} from './seed';
-import {branchingExample} from './branching-example';
 import type {Store,AtlasMeta} from './model';
 type RecordRow={id:string;owner:string;title:string;description:string;owner_name:string;public:number;official:number;updated_at:string;state:string};
 let connection:DatabaseSync|undefined;
@@ -22,7 +21,7 @@ function db(){
   if(existsSync(legacy))initial=JSON.parse(readFileSync(legacy,'utf8'));
   connection.prepare('INSERT OR IGNORE INTO atlases VALUES(?,?,?,?,?,?,?,?,?)').run('official','system','具身视觉 · 三张活地图','从视觉感知到机器人操作的共享知识样例。','TriMap 小组',1,1,new Date().toISOString(),JSON.stringify(initial));
  }
- connection.prepare('INSERT OR IGNORE INTO atlases VALUES(?,?,?,?,?,?,?,?,?)').run('example-branching-v1','system','光路演示 · 一入四出','白光进入视觉感知棱镜，四条实际关系分别通向四个下游节点。','TriMap 示例',1,0,new Date().toISOString(),JSON.stringify(branchingExample));
+ connection.prepare("DELETE FROM atlases WHERE id='example-branching-v1' AND owner='system'").run();
  return connection;
 }
 export function databaseSecret(){const c=db();const row=c.prepare('SELECT value FROM settings WHERE key=?').get('visitor_secret') as {value:string}|undefined;if(row)return row.value;const value=crypto.randomUUID()+crypto.randomUUID();c.prepare('INSERT OR IGNORE INTO settings VALUES(?,?)').run('visitor_secret',value);return (c.prepare('SELECT value FROM settings WHERE key=?').get('visitor_secret') as {value:string}).value;}
