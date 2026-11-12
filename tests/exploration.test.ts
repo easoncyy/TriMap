@@ -127,3 +127,5 @@ test('an empty store produces a usable default view', () => {
 });
 
 test('fold overrides persist per map while rejecting malformed entries',()=>{const state=parseExploration(JSON.stringify({folds:{'domain:dispersion:task':{ab:true,bc:false,bad:3},invalid:3}}));assert.deepEqual(state?.folds,{'domain:dispersion:task':{ab:true,bc:false}});});
+
+test('layout provenance survives storage without confusing automatic and manual mirrors',()=>{const state=parseExploration(JSON.stringify({layoutVersion:2,manualPositions:['a',7],positions:{a:{x:20,y:30}},mirrors:[{id:'m',edgeId:'e',view:'domain:dispersion',position:{x:10,y:10},angle:0,manual:true}]}));assert.equal(state?.layoutVersion,2);assert.deepEqual(state?.manualPositions,['a']);assert.equal(state?.mirrors[0].manual,true);assert.deepEqual(state?.positions.a,{x:20,y:30});});
