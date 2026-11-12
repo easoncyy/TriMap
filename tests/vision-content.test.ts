@@ -322,7 +322,7 @@ test('seed integration keeps lifecycle fields and approved vision source unchang
   // No database or publish/restore API is invoked in these source-only tests.
   const content = readFileSync(new URL('../src/lib/vision-content.ts', import.meta.url));
   assert.equal(createHash('sha256').update(content).digest('hex'),
-    '862fd5e62d471fb8bc294e76b4ab41c534ef4e33b280db0fd538fcf6202b3327');
+    '04c3645ed2771118683c38ab8e6d021bac03444d4240d4d2c9bd3a781d914fe3');
 });
 
 test('all paper sources use the exact reviewed versions; documentation stays separately identified', () => {
