@@ -1,10 +1,9 @@
 import {environment} from './context';
 import {seed} from '../src/lib/seed';
-import {branchingExample} from '../src/lib/branching-example';
 import type {Store,AtlasMeta} from '../src/lib/model';
 type RecordRow={id:string;owner:string;title:string;description:string;owner_name:string;public:number;official:number;updated_at:string;state:string};
 const db=()=>environment().DB;
-export async function initialize(){await db().batch([db().prepare('INSERT OR IGNORE INTO atlases VALUES(?,?,?,?,?,?,?,?,?)').bind('official','system','具身视觉 · 三张活地图','共享样例','TriMap 示例',1,1,new Date().toISOString(),JSON.stringify(seed)),db().prepare('INSERT OR IGNORE INTO atlases VALUES(?,?,?,?,?,?,?,?,?)').bind('example-branching-v1','system','光路演示 · 一入四出','四条彩色分支','TriMap 示例',1,0,new Date().toISOString(),JSON.stringify(branchingExample))]);}
+export async function initialize(){await db().batch([db().prepare('INSERT OR IGNORE INTO atlases VALUES(?,?,?,?,?,?,?,?,?)').bind('official','system','具身视觉 · 三张活地图','共享样例','TriMap 示例',1,1,new Date().toISOString(),JSON.stringify(seed))]);}
 export async function atlasRecord(id='official'):Promise<RecordRow|undefined>{return await db().prepare('SELECT * FROM atlases WHERE id=?').bind(id).first()||undefined;}
 export function readable(row:RecordRow,visitor:string,admin:boolean){return !!row.public||row.owner===visitor||admin;}
 export function editable(row:RecordRow,visitor:string,admin:boolean){return row.owner===visitor||admin;}

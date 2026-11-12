@@ -112,3 +112,11 @@
 .studio .routing-mirror .mirror-metal{fill:#a5b1ba;stroke:#454d54;stroke-width:2;filter:drop-shadow(4px 7px 2px #000b)}
 .studio .routing-mirror .mirror-edge{stroke:#111820;stroke-width:2;stroke-opacity:1}
 .studio .lens-tab{border-top:2px solid #ffffff65;box-shadow:inset 0 2px 5px #fff4,inset 0 -5px 12px #0004,0 4px 8px #0008!important}
+/* Labels stay attached: only the entire optical object moves. */
+.studio .knowledge-node.optical-node{position:relative;width:200px;min-height:245px}
+.studio .optical-node .prism-shape{position:absolute;top:16px;left:41px;margin:0}
+.studio .optical-node .node-kind{position:absolute;top:-10px;left:100px;width:180px;max-width:180px;margin:0;font-size:8px;line-height:1.4;transform:translateX(-50%) scale(var(--label-scale,1));transform-origin:center bottom;pointer-events:none}
+.studio .optical-node strong{position:absolute;top:142px;left:100px;width:200px;max-width:200px;margin:0;padding:3px 5px;font-size:14px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transform:translateX(-50%) scale(var(--label-scale,1));transform-origin:center top;pointer-events:none;background:#10111280}
+.studio .routing-mirror{position:relative;min-height:200px}
+.studio .routing-mirror .mirror-relation-name{position:absolute;top:82px;left:38px;width:170px;min-width:0;max-width:170px;margin:0;font-size:11px!important;line-height:1.5;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transform:translateX(-50%) scale(var(--label-scale,1));transform-origin:center top;background:#10111280}
+.studio .routing-mirror small{position:absolute;top:142px;left:38px;width:150px;margin:0;font-size:9px;transform:translateX(-50%) scale(var(--label-scale,1));transform-origin:center top}
