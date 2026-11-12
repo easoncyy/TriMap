@@ -150,3 +150,11 @@
 .tool-menu-content{position:absolute;bottom:calc(100% + 18px);right:0;width:min(360px,85vw);max-height:55dvh;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px;background:#101410f5;border:1px solid #48513e;border-radius:8px;box-shadow:0 12px 40px #0009}
 .studio .tool-menu-content button{white-space:normal;text-align:left;justify-content:flex-start}
 @media(max-width:600px){.studio .tool-main{gap:4px}.studio .tool-search{max-width:100px}.studio .tool-main>button{white-space:nowrap}.tool-menu summary{padding:6px}}
+
+/* Fold controls belong to the active mirror, not the entire overview. */
+.studio .routing-mirror .mirror-fold{opacity:0;pointer-events:none;transition:opacity .12s ease}
+.studio .routing-mirror:hover .mirror-fold,
+.studio .routing-mirror.selected .mirror-fold,
+.studio .routing-mirror:focus-within .mirror-fold{opacity:1;pointer-events:auto}
+.studio .routing-mirror.is-folded .mirror-surface{stroke-dasharray:4 2}
+@media(prefers-reduced-motion:reduce){.studio .routing-mirror .mirror-fold{transition:none}}

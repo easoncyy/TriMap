@@ -27,7 +27,7 @@ export function KnowledgePrism({data,selected}:NodeProps){
 }
 
 export function RoutingMirror({data,selected}:NodeProps){
- return <div className={`routing-mirror ${selected?'selected':''}`}>
+ return <div className={`routing-mirror ${selected?'selected':''} ${data.folded?'is-folded':''}`}>
   <Handle type="target" position={Position.Left} isConnectable={false}/>
   <svg viewBox="0 0 76 76" className="mirror-shape" aria-hidden="true">
    <g className="mirror-inner" transform={`rotate(${Number(data.angle)} 38 38)`}>
@@ -37,7 +37,7 @@ export function RoutingMirror({data,selected}:NodeProps){
    </g>
    <circle className="mirror-pin" cx="38" cy="38" r="1.8"/>
   </svg>
-  {typeof data.onToggle==='function'&&<button type="button" className="mirror-fold nodrag nopan" aria-label={`${data.folded?'展开':'折叠'}关系：${String(data.title)}`} title={data.folded?`展开：${String(data.targetTitle||'下一层知识')}`:'折叠这条关系的下游'} onClick={event=>{event.stopPropagation();(data.onToggle as ()=>void)();}}>{data.folded?'+':'−'}</button>}
+  {typeof data.onToggle==='function'&&<button type="button" className="mirror-fold nodrag nopan" aria-expanded={!data.folded} aria-label={`${data.folded?'展开':'折叠'}关系：${String(data.title)}`} title={data.folded?`展开：${String(data.targetTitle||'下一层知识')}`:'折叠这条关系的下游'} onClick={event=>{event.stopPropagation();(data.onToggle as ()=>void)();}}>{data.folded?'+':'−'}</button>}
   <span className="mirror-relation-name">{String(data.title)}</span>
   {!!data.preview&&<small>目标预览 · 未发布</small>}
   <Handle type="source" position={Position.Right} isConnectable={selected} isConnectableStart={selected}/>

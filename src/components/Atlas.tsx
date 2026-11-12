@@ -139,7 +139,7 @@ export default function Atlas(){
   if(prismMode==='refraction'&&!linking)setRefractedPositions(p=>({...p,...Object.fromEntries(Object.entries(l.prisms).map(([id,point])=>[viewKey+':'+id,point]))}));
   else setPositions(p=>({...p,...l.prisms}));
   setMirrors(ms=>[...ms.filter(m=>m.view!==mirrorKey),...edges.map(e=>({id:'mirror:'+e.id,edgeId:e.id,view:mirrorKey,position:l.mirrors[e.id],angle:0,manual:false,targetId:ms.find(m=>m.view===mirrorKey&&m.edgeId===e.id)?.targetId}))]);
-  setLayoutEpoch(n=>n+1);setNotice('已整理完整分支；展开和收起保持位置');
+  setLayoutEpoch(n=>n+1);setNotice('');
  }
  function placeMirror(){const e=opticalEdges.find(e=>e.id===edgeId)||opticalEdges.find(e=>e.source===focus||e.target===focus);if(!e){setNotice('先建立一条知识关系，它会自动显示为关系镜');return;}const m=activeMirrors.find(m=>m.edgeId===e.id);if(m){setMirrorId(m.id);setEdgeId(e.id);setDetailOpen(true);setPanel('detail');}}
  async function mutate(body:unknown,message:string){setBusy(true);setError('');try{const r=await fetch('/api/atlas?id='+encodeURIComponent(atlasId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await r.json();if(!r.ok)throw Error(result.error);await refresh();setNotice(message);setModal(null);return true;}catch(e){setError(e instanceof Error?e.message:'操作失败');return false;}finally{setBusy(false);}}
