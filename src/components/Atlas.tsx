@@ -13,7 +13,7 @@ import {graphChanges} from '@/lib/diff';
 import {EXPLORATION_VERSION,parseExploration,emptyExploration,loadExploration,mirrorViewKey,readCheckpoint,writeCheckpoint,writeExploration,type ExplorationState} from '@/lib/exploration';
 import {ArrowUpRight,ArrowLeft,Search,Plus,SlidersHorizontal,MessageSquare,GitBranch,X,Download,Check,Layers,Compass,History,Lock,ChevronRight,Send} from 'lucide-react';
 import {lenses,type Lens,type KnowledgeNode,type Relation,type Store,type AtlasMeta} from '@/lib/model';
-type Snapshot=Omit<Store,'revisions'>&{meta:AtlasMeta;revisions:{id:string;date:string;reason:string;changes?:string[]}[]};
+type Snapshot=Omit<Store,'revisions'>&{contentVersion?:string;meta:AtlasMeta;revisions:{id:string;date:string;reason:string;changes?:string[]}[]};
 const nodeTypes={spectral:KnowledgePrism,mirror:RoutingMirror};
 const edgeTypes={spectral:SpectralEdge};
 const emptyForm:KnowledgeNode={id:'',title:'',kind:'概念',lens:'domain',summary:'',body:'',sources:[],status:'待核实',x:400,y:250};
@@ -142,7 +142,7 @@ export default function Atlas(){
   setLayoutEpoch(n=>n+1);setNotice('');
  }
  function placeMirror(){const e=opticalEdges.find(e=>e.id===edgeId)||opticalEdges.find(e=>e.source===focus||e.target===focus);if(!e){setNotice('先建立一条知识关系，它会自动显示为关系镜');return;}const m=activeMirrors.find(m=>m.edgeId===e.id);if(m){setMirrorId(m.id);setEdgeId(e.id);setDetailOpen(true);setPanel('detail');}}
- async function mutate(body:unknown,message:string){setBusy(true);setError('');try{const r=await fetch('/api/atlas?id='+encodeURIComponent(atlasId),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await r.json();if(!r.ok)throw Error(result.error);await refresh();setNotice(message);setModal(null);return true;}catch(e){setError(e instanceof Error?e.message:'操作失败');return false;}finally{setBusy(false);}}
+ async function mutate(body:unknown,message:string){setBusy(true);setError('');try{const r=await fetch('/api/atlas?id='+encodeURIComponent(atlasId),{method:'POST',headers:{'Content-Type':'application/json',...(store?.contentVersion?{'x-atlas-content-version':store.contentVersion}:{})},body:JSON.stringify(body)});const result=await r.json();if(!r.ok)throw Error(result.error);await refresh();setNotice(message);setModal(null);return true;}catch(e){setError(e instanceof Error?e.message:'操作失败');return false;}finally{setBusy(false);}}
  function navigate(id:string){setDetailOpen(true);const n=allNodes.find(n=>n.id===id);if(!n)return;if(focus!==id)setTrail(t=>[...t,focus].slice(-20));setFocus(id);setLens(n.lens);setExpanded(false);setQuery('');setKind('全部类型');setPanel('detail');setEdgeId(null);}
  function openFeedback(){setDetailOpen(true);setFeedbackTarget('current');setPanel('feedback');}
  function switchLens(next:Lens){setPrismMode('dispersion');setMirrorId(null);setLens(next);setKind('全部类型');setExpanded(false);setQuery('');setEdgeId(null);if(next!==lens)setLensSweep(n=>n+1);}

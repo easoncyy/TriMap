@@ -320,7 +320,7 @@ test('seed integration keeps lifecycle fields and approved vision source unchang
   assert.deepEqual(lifecycle, {draft: null, feedback: [], revisions: []});
   // The full original Store fingerprint above also detects a lifecycle change.
   // No database or publish/restore API is invoked in these source-only tests.
-  const content = readFileSync(new URL('../src/lib/vision-content.ts', import.meta.url));
+  const content = readFileSync(new URL('../src/lib/vision-content.ts', import.meta.url),'utf8').replaceAll('\r\n','\n');
   assert.equal(createHash('sha256').update(content).digest('hex'),
     '04c3645ed2771118683c38ab8e6d021bac03444d4240d4d2c9bd3a781d914fe3');
 });

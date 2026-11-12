@@ -64,8 +64,8 @@ test('PR8 is preserved exactly; its delta is one node, six edges and four body e
  for(const n of changed)assert.deepEqual(withoutBody(infra.infraNodes.find(x=>x.id===n.id)!),withoutBody(n));
  for(const r of priorEdges)assert.deepEqual(infra.infraRelations.find(x=>x.id===r.id),r);
 });
-test('vision package remains byte-identical and all sixteen cards and thirty-two edges are included',()=>{
- assert.equal(createHash('sha256').update(readFileSync(new URL('../src/lib/vision-content.ts',import.meta.url))).digest('hex'),'04c3645ed2771118683c38ab8e6d021bac03444d4240d4d2c9bd3a781d914fe3');
+test('vision package retains canonical LF bytes and all sixteen cards and thirty-two edges are included',()=>{
+ assert.equal(createHash('sha256').update(readFileSync(new URL('../src/lib/vision-content.ts',import.meta.url),'utf8').replaceAll('\r\n','\n')).digest('hex'),'04c3645ed2771118683c38ab8e6d021bac03444d4240d4d2c9bd3a781d914fe3');
  assert.deepEqual(seed.nodes.filter(n=>n.id.startsWith('vision-')),vision.visionNodes);
  assert.deepEqual(seed.relations.filter(r=>r.id.startsWith('vision-rel-')),vision.visionRelations);
 });

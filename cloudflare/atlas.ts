@@ -1,3 +1,4 @@
+import {contentVersion} from './release-safety';
 import {NextRequest,NextResponse} from 'next/server';
 import {authorized,sameOrigin,visitorIdentity,attachVisitor} from '@/lib/auth';
 import {readStore,updateStore,atlasRecord,readable,editable,metadata} from '@/lib/storage';
@@ -10,7 +11,7 @@ export async function GET(req:NextRequest){
  const row=await atlasRecord(id);
  if(!row||!readable(row,visitor.id,admin))return NextResponse.json({error:'图谱不存在或尚未公开'},{status:404});
  const s=await readStore(id),canEdit=editable(row,visitor.id,admin);
- return attachVisitor(NextResponse.json({...s,meta:metadata(row,visitor.id,admin),draft:canEdit?s.draft:null,revisions:s.revisions.map(({id,date,reason,changes})=>({id,date,reason,changes})),feedback:s.feedback.filter(f=>canEdit||!f.draftOnly||s.nodes.some(n=>n.id===f.target)||s.relations.some(e=>e.id===f.target))}),visitor);
+ return attachVisitor(NextResponse.json({...s,contentVersion:contentVersion(s),meta:metadata(row,visitor.id,admin),draft:canEdit?s.draft:null,revisions:s.revisions.map(({id,date,reason,changes})=>({id,date,reason,changes})),feedback:s.feedback.filter(f=>canEdit||!f.draftOnly||s.nodes.some(n=>n.id===f.target)||s.relations.some(e=>e.id===f.target))}),visitor);
 }
 export async function POST(req:NextRequest){
  try{
@@ -29,6 +30,7 @@ export async function POST(req:NextRequest){
   }else{
    if(!editable(row,visitor.id,admin))return NextResponse.json({error:'只能修改自己的图谱；共享样例需要维护者权限'},{status:401});
    await updateStore(s=>{
+    if(req.headers.get('x-atlas-content-version')!==contentVersion(s))throw Error('内容版本已更新，请刷新页面后重试');
     if(b.action==='draft'){validateGraph(b.nodes,b.relations);s.draft={nodes:b.nodes,relations:b.relations};}
     else if(b.action==='publish'){
      if(!s.draft)throw Error('没有待发布的草稿');if(typeof b.reason!=='string'||!b.reason.trim())throw Error('请填写发布说明');
