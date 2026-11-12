@@ -9,7 +9,18 @@ const digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 const save=(name:string,data:string)=>writeFileSync(path.join(dir,name),data,{mode:0o600});
 const load=(name:string)=>readFileSync(path.join(dir,name),'utf8');
 function locked(){if(!query("SELECT value FROM settings WHERE key='content_maintenance'").length)throw Error('Maintenance not enabled');}
-function writeState(before:string,after:string){locked();const file=path.join(dir,'pending.sql');save('pending.sql',`UPDATE atlases SET state=${quote(after)},updated_at=${quote(new Date().toISOString())} WHERE id='official' AND state=${quote(before)} AND EXISTS (SELECT 1 FROM settings WHERE key='content_maintenance');`);try{call(['d1','execute','DB','--remote','--json','--file',file]);}finally{unlinkSync(file);}const read=query("SELECT state FROM atlases WHERE id='official'")[0]?.state;if(read!==after)throw Error('CAS or full-state verification failed');}
+async function writeState(before:string,after:string){
+ locked();
+ const credential=readFileSync(path.join(process.env.APPDATA!,'xdg.config/.wrangler/config/default.toml'),'utf8');
+ const token=credential.match(/^oauth_token\s*=\s*"([^"]+)"/m)?.[1];if(!token)throw Error('Wrangler OAuth unavailable');
+ const api=async(endpoint:string,body?:unknown)=>{const r=await fetch('https://api.cloudflare.com/client/v4'+endpoint,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000)});const data:any=await r.json();if(!data.success)throw Error('D1 API request failed, status '+r.status);return data.result;};
+ const accounts=await api('/accounts');let account:string|undefined;
+ for(const a of accounts){const projects=await api('/accounts/'+a.id+'/pages/projects');if(projects.some((p:any)=>p.name==='trimap-spectrum-atlas')){account=a.id;break;}}
+ if(!account)throw Error('Production account not found');
+ const config=JSON.parse(readFileSync('cloudflare/wrangler.jsonc','utf8'));
+ await api('/accounts/'+account+'/d1/database/'+config.d1_databases[0].database_id+'/query',{sql:"UPDATE atlases SET state=?,updated_at=? WHERE id=? AND state=? AND EXISTS (SELECT 1 FROM settings WHERE key='content_maintenance')",params:[after,new Date().toISOString(),'official',before]});
+ const read=query("SELECT state FROM atlases WHERE id='official'")[0]?.state;if(read!==after)throw Error('CAS or full-state verification failed');
+}
 if(command==='lock'){query("INSERT INTO settings(key,value) VALUES('content_maintenance','release')");console.log('Maintenance enabled');}
 else if(command==='unlock'){locked();query("DELETE FROM settings WHERE key='content_maintenance'");console.log('Maintenance disabled');}
 else if(command==='prepare'){
@@ -31,9 +42,9 @@ else if(command==='prepare'){
  locked();const manifest=JSON.parse(load('manifest.json'));if(manifest.revision!==execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim())throw Error('Revision mismatch');
  if(digest(load('database.sql'))!==manifest.backupSha256||digest(load('official.json'))!==manifest.beforeSha256||digest(load('candidate.json'))!==manifest.candidateSha256)throw Error('Artifact hash mismatch');
  const original=load('official.json'),before=JSON.parse(original),graph=JSON.parse(load('candidate.json'));
- const drafted={...before,draft:graph};writeState(original,JSON.stringify(drafted));
+ const drafted={...before,draft:graph};await writeState(original,JSON.stringify(drafted));
  const published=structuredClone(drafted);published.revisions.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),reason:'发布已审核应用、视觉和 Infra 集成内容（89aa9d8）',changes:manifest.changes,nodes:structuredClone(before.nodes),relations:structuredClone(before.relations)});published.nodes=graph.nodes;published.relations=graph.relations;published.draft=null;
- writeState(JSON.stringify(drafted),JSON.stringify(published));save('published.json',JSON.stringify(published));
+ await writeState(JSON.stringify(drafted),JSON.stringify(published));save('published.json',JSON.stringify(published));
  const rows=query('SELECT * FROM atlases ORDER BY id'),old=JSON.parse(load('atlases.json'));
  if(JSON.stringify(rows.filter((r:any)=>r.id!=='official'))!==JSON.stringify(old.filter((r:any)=>r.id!=='official')))throw Error('Other atlases changed');
  const official=rows.find((r:any)=>r.id==='official'),previous=old.find((r:any)=>r.id==='official');for(const key of Object.keys(previous).filter(k=>!['state','updated_at'].includes(k)))if(official[key]!==previous[key])throw Error('Official metadata changed');
