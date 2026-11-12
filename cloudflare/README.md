@@ -47,3 +47,5 @@ PR 的 `Verify Infra and Pages` 工作流安装锁定依赖，运行类型、单
 本轮新增 Infra 内容与镜面折叠，发布顺序：构建部署（停止创建演示样例）→ 应用迁移 0002 → 执行 sync-content.mjs → smoke 验证版本及 Infra 卡片，并确认 /api/atlases 不再返回系统演示。
 
 固定 Wrangler 的本地模拟器不支持当前线上兼容日期；本地预览可显式传 `pages dev dist --compatibility-date 2026-05-22`，仅改变本地模拟日期，不修改线上配置。
+
+同步验收按写入后实际历史快照 ID 判断，不依赖 Wrangler 文件导入后另一个 SQL 连接的 changes() 值，避免写入成功被误报为冲突；原状态比较更新保护保持不变。
