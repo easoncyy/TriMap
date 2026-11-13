@@ -158,3 +158,7 @@
 .studio .routing-mirror:focus-within .mirror-fold{opacity:1;pointer-events:auto}
 .studio .routing-mirror.is-folded .mirror-surface{stroke-dasharray:4 2}
 @media(prefers-reduced-motion:reduce){.studio .routing-mirror .mirror-fold{transition:none}}
+
+.usage-guide{padding:0;border:1px solid #64645a;border-radius:14px;background:#111514;color:#dce0d5;width:min(540px,calc(100vw - 32px));max-height:85dvh;overflow:auto;box-shadow:0 30px 100px #0009}
+.usage-guide::backdrop{background:#000a;backdrop-filter:blur(5px)}
+.usage-guide-card{padding:28px}.usage-guide header,.usage-guide footer{display:flex;align-items:center;justify-content:space-between;gap:16px}.usage-guide header span{font-size:11px;letter-spacing:2px;color:#b7b6cb}.usage-guide header button{font-size:22px}.usage-guide h2{font-size:23px;line-height:1.5;margin:12px 0 20px}.usage-guide p{font-size:14px;line-height:1.9}.usage-guide .usage-progress{color:#aaa1d5;font-size:12px;margin-top:24px}.usage-guide aside{padding:16px;border-left:2px solid #9a86ff;background:#ffffff06;font-size:13px;line-height:1.8;margin:22px 0}.usage-guide nav{display:flex;gap:10px;margin:24px 0}.usage-guide nav button{border-radius:50%;width:32px;height:32px;padding:0}.usage-guide nav [aria-current]{border-color:#b5a5ff;background:#65559355}.usage-guide footer button{padding:10px 18px}.usage-guide button:focus-visible{outline:2px solid #b5a5ff;outline-offset:3px}
