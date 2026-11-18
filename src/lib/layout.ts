@@ -34,8 +34,8 @@ export function routeMirrors(positions:Record<string,Point>,edges:Relation[]){
  return result;
 }
 /** Tidy bilateral tree: each branch owns a contiguous vertical band. */
-export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:string){
- const tree=primaryTree(nodes,edges,root),positions:Record<string,Point>={},weight=new Map<string,number>();
+export function layoutPrisms(nodes:KnowledgeNode[],tree:ReturnType<typeof primaryTree>,root:string){
+ const positions:Record<string,Point>={},weight=new Map<string,number>();
  const measure=(id:string):number=>{const value=Math.max(1,tree.children.get(id)!.reduce((sum,child)=>sum+measure(child),0));weight.set(id,value);return value;};
  if(tree.depth.has(root)){measure(root);positions[root]={x:0,y:0};
   const groups:[string[],string[]]=[[],[]],loads=[0,0];
@@ -45,6 +45,11 @@ export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:strin
  }
  const bottom=Math.max(0,...Object.values(positions).map(p=>p.y))+850;
  nodes.filter(n=>!positions[n.id]).sort((a,b)=>a.id.localeCompare(b.id)).forEach((n,i)=>{positions[n.id]={x:(i%3-1)*1100,y:bottom+Math.floor(i/3)*520};});
+ return positions;
+}
+export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:string){
+ const tree=primaryTree(nodes,edges,root);
+ const positions=layoutPrisms(nodes,tree,root);
  return {prisms:positions,mirrors:routeMirrors(positions,edges),treeEdges:tree.treeEdges};
 }
 /** Collapsed mirrors use outer shelves, never a tiny fan around their parent. */
