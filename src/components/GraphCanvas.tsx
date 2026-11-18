@@ -1,12 +1,13 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {Plus,Minus} from 'lucide-react';
+import {locateCamera,restoreCamera,type CameraSnapshot,type RevealRequest} from '@/lib/exploration-navigation';
 import {placeLabelWithin,type Box,type Segment} from '@/lib/label-placement';
 import {ReactFlow,Controls,ControlButton,useNodesState,type ReactFlowProps,type ReactFlowInstance,type NodeChange} from '@xyflow/react';
 
-type Props=ReactFlowProps&{reveal?:{id:string;epoch:number}|null;onRevealHandled?:(epoch:number)=>void};
+type Props=ReactFlowProps&{reveal?:RevealRequest|null;onRevealHandled?:(epoch:number)=>void;onViewChange?:(snapshot:CameraSnapshot)=>void};
 /** React Flow owns geometry. Labels/leaders are disposable screen-space presentation. */
-export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,...props}:Props){
+export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,onViewChange,...props}:Props){
  const [nodes,setNodes,onNodesChange]=useNodesState(incoming);
  const container=useRef<HTMLDivElement>(null),leaders=useRef<SVGSVGElement>(null);
  const [instance,setInstance]=useState<ReactFlowInstance|null>(null);
@@ -14,6 +15,9 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
  const dragging=useRef<string|null>(null),hovered=useRef<string|null>(null);
  const labelFrame=useRef(0),fitted=useRef(false),autoFit=useRef(true);
  const lastReveal=useRef<number|null>(null);
+ const pendingReveal=useRef(reveal);pendingReveal.current=reveal;
+ const viewCallback=useRef(onViewChange);viewCallback.current=onViewChange;
+ function publishView(){const host=container.current;if(host&&instance)viewCallback.current?.({viewport:instance.getViewport(),width:host.clientWidth,height:host.clientHeight});}
  const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  function arrangeLabels(){
   cancelAnimationFrame(labelFrame.current);
@@ -21,7 +25,8 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
    const host=container.current;if(!host||!instance)return;
    const zoom=instance.getViewport().zoom;
    host.style.setProperty('--label-scale',String(1/zoom));
-   host.dataset.overview=String(zoom<.4);
+   host.dataset.overview=String(zoom<.4);host.dataset.detail=String(zoom>=.65);
+   host.querySelectorAll<HTMLElement>('.react-flow__node').forEach(owner=>{owner.dataset.labelPriority=String(owner.classList.contains('selected')||owner.dataset.id===hovered.current);});
    const labels=Array.from(host.querySelectorAll<HTMLElement>('.graph-label'));
    // One reset pass, one measurement pass, then one write pass.
    labels.forEach(el=>{el.style.translate='0px 0px';el.style.visibility='visible';});
@@ -38,26 +43,32 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
    const measured=labels.map(el=>{
     const owner=el.closest<HTMLElement>('.react-flow__node')!;
     const shape=owner.querySelector('.prism-shape,.mirror-shape')!;
-    const priority=owner.classList.contains('selected')||owner.dataset.id===hovered.current;
-    return {el,box:rect(el),shape:rect(shape),priority,mirror:owner.classList.contains('react-flow__node-mirror')};
-   }).sort((a,b)=>Number(b.priority)-Number(a.priority)||Number(a.mirror)-Number(b.mirror));
-   let hidden=0;const leaderLines:Segment[]=[];
+    const priority=owner.dataset.labelPriority==='true';
+    return {el,rank:owner.classList.contains('selected')?2:priority?1:0,owner:owner.dataset.id!,path:owner.classList.contains('navigation-mirror'),box:rect(el),shape:rect(shape),priority,mirror:owner.classList.contains('react-flow__node-mirror')};
+   }).sort((a,b)=>b.rank-a.rank||Number(a.mirror)-Number(b.mirror));
+   const labelObstacles:Box[]=[];
+   let hidden=0;const leaderLines:Array<Segment&{owner:string;priority:boolean}>=[];
    const placed=measured.map(item=>{
     const {box,shape,priority}=item;
     const onScreen=shape.x+shape.width>=0&&shape.y+shape.height>=0&&shape.x<=outer.width&&shape.y<=outer.height;
-    const result=onScreen?placeLabelWithin(box,obstacles,lines,bounds,priority?320:item.mirror?144:224):null;
+    const eligible=onScreen&&(!item.mirror||zoom>=.4||priority||item.path);
+    let result=eligible?placeLabelWithin(box,obstacles,lines,bounds,priority?112:zoom<.4?64:96,{owner:shape,peers:measured.filter(other=>other!==item&&other.mirror===item.mirror).map(other=>other.shape)}):null;
+    // Selected/focused text wins over the optional labels, never over the zoom controls.
+    if(eligible&&priority&&!result)result=placeLabelWithin(box,[shape,...labelObstacles,...Array.from(host.querySelectorAll('.react-flow__controls')).map(rect)],lines,bounds,112);
     if(!result){if(onScreen)hidden++;return {...item,result:null};}
-    obstacles.push(result);
+    obstacles.push(result);labelObstacles.push(result);
     if(Math.hypot(result.x-box.x,result.y-box.y)>12||priority){
      const a={x:shape.x+shape.width/2,y:shape.y+shape.height/2};
      const b={x:Math.max(result.x,Math.min(a.x,result.x+result.width)),y:Math.max(result.y,Math.min(a.y,result.y+result.height))};
-     leaderLines.push({a,b});
+     const dx=b.x-a.x,dy=b.y-a.y;
+     const t=Math.min(1,1/Math.max(Math.abs(dx)/(shape.width/2||1),Math.abs(dy)/(shape.height/2||1)));
+     leaderLines.push({a:{x:a.x+dx*t,y:a.y+dy*t},b,owner:item.owner,priority});
     }
     return {...item,result};
    });
    placed.forEach(({el,box,result})=>{el.style.visibility=result?'visible':'hidden';if(result)el.style.translate=`${(result.x-box.x)/zoom}px ${(result.y-box.y)/zoom}px`;});
    if(leaders.current){
-    leaders.current.replaceChildren(...leaderLines.map(({a,b})=>{const line=document.createElementNS('http://www.w3.org/2000/svg','line');for(const [key,value] of Object.entries({x1:a.x,y1:a.y,x2:b.x,y2:b.y}))line.setAttribute(key,String(value));return line;}));
+    leaders.current.replaceChildren(...leaderLines.map(({a,b,owner,priority})=>{const line=document.createElementNS('http://www.w3.org/2000/svg','line');for(const [key,value] of Object.entries({x1:a.x,y1:a.y,x2:b.x,y2:b.y}))line.setAttribute(key,String(value));line.dataset.owner=owner;line.classList.toggle('priority-leader',priority);return line;}));
    }
    setHiddenLabels(previous=>previous===hidden?previous:hidden);
   });
@@ -75,7 +86,7 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
  },[instance]);
  useEffect(()=>{
   if(!instance||fitted.current||!nodes.length||nodes.some(n=>!n.measured?.width))return;
-  fitted.current=true;fitAll();
+  fitted.current=true;if(!pendingReveal.current)fitAll();
  },[nodes,instance]);
 
  function changeNodes(changes:NodeChange[]){
@@ -90,7 +101,8 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
    cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
     const host=container.current;if(!host)return;
     const width=host.clientWidth,height=host.clientHeight;
-    if(autoFit.current)fitAll();
+    if(pendingReveal.current){arrangeLabels();}
+    else if(autoFit.current)fitAll();
     else{const v=instance.getViewport();void instance.setViewport({...v,x:v.x+(width-previous.width)/2,y:v.y+(height-previous.height)/2},{duration:0}).then(arrangeLabels);}
     previous={width,height};
    });
@@ -106,19 +118,31 @@ export default function GraphCanvas({nodes:incoming=[],reveal,onRevealHandled,..
  },[incoming,setNodes]);
  // Search changes which objects are present; do not refit after a drag or selection.
  const membership=incoming.map(n=>n.id).sort().join('|');
- useEffect(()=>{if(instance&&fitted.current)fitAll();},[membership,instance]);
+ useEffect(()=>{if(instance&&fitted.current&&!pendingReveal.current)fitAll();},[membership,instance]);
  useEffect(()=>{
   if(!instance||!reveal||lastReveal.current===reveal.epoch||!nodes.some(n=>n.id===reveal.id&&n.measured?.width))return;
   autoFit.current=false;
-  let frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(()=>{
-   const node=instance.getInternalNode(reveal.id);if(!node)return;
+  let frame=0;
+  // Let the reading/explorer layout and ResizeObserver settle before locating the target.
+  frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(()=>{
+   const host=container.current,node=instance.getInternalNode(reveal.id);if(!host||!node)return;
    lastReveal.current=reveal.epoch;
-   void instance.setCenter(node.internals.positionAbsolute.x+(node.measured.width||200)/2,node.internals.positionAbsolute.y+(node.measured.height||211)/2,{zoom:.8,duration:reduced()?0:180}).then(()=>{arrangeLabels();onRevealHandled?.(reveal.epoch);});
+   const current=instance.getViewport();
+   const shape=host.querySelector(`[data-id="${CSS.escape(reveal.id)}"] .prism-shape, [data-id="${CSS.escape(reveal.id)}"] .mirror-shape`);if(!shape)return;
+   const r=shape.getBoundingClientRect(),h=host.getBoundingClientRect();
+   const object={x:(r.x-h.x-current.x)/current.zoom,y:(r.y-h.y-current.y)/current.zoom,width:r.width/current.zoom,height:r.height/current.zoom};
+   const safe={x:64,y:16,width:Math.max(1,host.clientWidth-80),height:Math.max(1,host.clientHeight-84)};
+   const origin=reveal.restore?restoreCamera(reveal.restore,host.clientWidth,host.clientHeight):current;
+   const next=locateCamera(origin,object,safe,!!reveal.restore);
+   const changed=Math.abs(current.x-next.x)>.5||Math.abs(current.y-next.y)>.5||Math.abs(current.zoom-next.zoom)>.001;
+   void (changed?instance.setViewport(next,{duration:reduced()?0:180}):Promise.resolve(true)).then(()=>{
+    if(!container.current||lastReveal.current!==reveal.epoch)return;arrangeLabels();publishView();onRevealHandled?.(reveal.epoch);
+   });
   });});
   return()=>cancelAnimationFrame(frame);
  },[instance,reveal,nodes]);
- return <div className="graph-host" ref={container} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;if(id!==hovered.current){hovered.current=id;arrangeLabels();}}} onMouseLeave={()=>{hovered.current=null;arrangeLabels();}} onFocus={event=>{hovered.current=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;arrangeLabels();}}>
-  <ReactFlow {...props} fitView={false} onMoveStart={(event,viewport)=>{if(event)autoFit.current=false;props.onMoveStart?.(event,viewport);}} onMove={(event,viewport)=>{arrangeLabels();props.onMove?.(event,viewport);}} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{dragging.current=node.id;autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{props.onNodeDragStop?.(event,node,items);dragging.current=null;}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={nodes} onNodesChange={changeNodes}>
+ return <div className="graph-host" ref={container} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;if(id!==hovered.current){hovered.current=id;arrangeLabels();}}} onMouseLeave={()=>{hovered.current=null;arrangeLabels();}} onBlur={()=>{hovered.current=null;arrangeLabels();}} onFocus={event=>{hovered.current=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;arrangeLabels();}}>
+  <ReactFlow {...props} fitView={false} onMoveEnd={(event,viewport)=>{publishView();props.onMoveEnd?.(event,viewport);}} onMoveStart={(event,viewport)=>{if(event)autoFit.current=false;props.onMoveStart?.(event,viewport);}} onMove={(event,viewport)=>{arrangeLabels();props.onMove?.(event,viewport);}} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{dragging.current=node.id;autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{props.onNodeDragStop?.(event,node,items);dragging.current=null;}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={nodes} onNodesChange={changeNodes}>
    {props.children}<Controls showZoom={false} showInteractive={false} onFitView={fitAll}><ControlButton aria-label="Zoom In" onClick={()=>{autoFit.current=false;void instance?.zoomIn({duration:reduced()?0:180});}}><Plus/></ControlButton><ControlButton aria-label="Zoom Out" onClick={()=>{autoFit.current=false;void instance?.zoomOut({duration:reduced()?0:180});}}><Minus/></ControlButton></Controls>
   </ReactFlow>
   <svg ref={leaders} className="label-leaders" aria-hidden="true"/>

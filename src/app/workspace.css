@@ -220,3 +220,36 @@
  .studio.observatory-workspace.is-immersive .canvas-toolbar .mode-toggle .mode-label {display:none}
  .studio.observatory-workspace.is-immersive .canvas-toolbar .mode-toggle .mode-label-compact {display:inline}
 }
+
+/* Batch 3: restrained hierarchy and explicit navigation, without moving graph objects. */
+.studio.observatory-workspace .graph-host[data-detail="false"] .react-flow__node:not([data-label-priority="true"]) .graph-label .node-kind {display:none}
+.studio.observatory-workspace .graph-host .react-flow__node[data-label-priority="true"] .graph-label .node-kind {display:block}
+.studio.observatory-workspace .graph-host .react-flow__node[data-label-priority="true"] {z-index:4001!important}
+.studio.observatory-workspace .graph-host .react-flow__node[data-label-priority="true"] .graph-label {background:var(--atlas-raised);box-shadow:inset 2px 0 var(--lens)}
+.studio.observatory-workspace .graph-host .selected .prism-shape {filter:drop-shadow(0 0 2px var(--lens))}
+.studio.observatory-workspace .label-leaders line {stroke-dasharray:2 4;opacity:.5}
+.studio.observatory-workspace .label-leaders .priority-leader {stroke:var(--lens);stroke-width:1.5;stroke-dasharray:none;opacity:1}
+.studio.observatory-workspace .navigation-ray .react-flow__edge-path {stroke-width:2.5}
+.studio.observatory-workspace .navigation-mirror .graph-label {box-shadow:inset 0 -1px var(--lens)}
+.studio.observatory-workspace .reading-navigation {display:flex;flex-shrink:0;gap:8px;padding:8px 16px;border-bottom:1px solid var(--atlas-reading-line)}
+.studio.observatory-workspace .reading-navigation button {display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-height:44px;padding:6px 4px;border:1px solid var(--atlas-reading-line);white-space:nowrap}
+.studio.observatory-workspace .reading-navigation button:disabled {opacity:.45;cursor:default}
+.studio.observatory-workspace .reading-sections {display:flex;gap:8px;margin:16px 0}
+.studio.observatory-workspace .reading-sections button {flex:1;min-height:44px;border:1px solid var(--atlas-reading-line)}
+.studio.observatory-workspace .reading-summary .reading-navigation {padding:0;margin:8px 0;border:0}
+.studio.observatory-workspace .reading-summary {overscroll-behavior:contain}
+@media (max-width:767px) {
+ .studio.observatory-workspace .reading-navigation {padding:6px 12px;gap:8px}
+ .studio.observatory-workspace .canvas-toolbar .mode-toggle .mode-label-compact {display:inline;font-size:14px}
+ .studio.observatory-workspace .canvas-toolbar .mode-toggle {gap:4px;padding:6px}
+ .studio.observatory-workspace .reading-summary p {margin-bottom:4px}
+ .studio.observatory-workspace .reading-summary h2 {margin-bottom:4px}
+ .studio.observatory-workspace .reading-summary {padding-bottom:12px}
+}
+@media (max-width:359px) {
+ .studio.observatory-workspace .canvas-toolbar {padding-inline:8px}
+ .studio.observatory-workspace .canvas-toolbar button {gap:4px;padding:6px}
+}
+@media (min-width:360px) and (max-width:767px) {
+ .studio.observatory-workspace.is-immersive .canvas-toolbar .mode-toggle .mode-label-compact {display:none}
+}

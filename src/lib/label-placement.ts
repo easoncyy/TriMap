@@ -21,7 +21,7 @@ export function placeLabel(box:Box,obstacles:Box[],lines:Segment[]):Box{
 /** Bounded screen-space placement. Hide an optional overview label rather than
  * sending it thousands of pixels away from its owner. Rays are a soft cost;
  * opaque label grounds keep text readable where crossing cannot be avoided. */
-export function placeLabelWithin(box:Box,obstacles:Box[],lines:Segment[],bounds:Box,maxDistance=144):Box|null{
+export function placeLabelWithin(box:Box,obstacles:Box[],lines:Segment[],bounds:Box,maxDistance=144,ownership?:{owner:Box;peers:Box[]}):Box|null{
  const clamp=(p:Box)=>({...p,x:Math.max(bounds.x,Math.min(p.x,bounds.x+bounds.width-p.width)),y:Math.max(bounds.y,Math.min(p.y,bounds.y+bounds.height-p.height))});
  if(box.width>bounds.width||box.height>bounds.height)return null;
  let best:Box|null=null,bestScore=Infinity;
@@ -31,6 +31,13 @@ export function placeLabelWithin(box:Box,obstacles:Box[],lines:Segment[],bounds:
   candidates.push(clamp({...box,x:box.x+Math.cos(angle)*radius,y:box.y+Math.sin(angle)*radius}));
  }
  for(const p of candidates){
+  if(Math.hypot(p.x-box.x,p.y-box.y)>maxDistance)continue;
+  if(ownership){
+   const cx=p.x+p.width/2,cy=p.y+p.height/2;
+   const distance=(o:Box)=>Math.hypot(Math.max(o.x-cx,0,cx-o.x-o.width),Math.max(o.y-cy,0,cy-o.y-o.height));
+   const own=distance(ownership.owner);
+   if(ownership.peers.some(peer=>distance(peer)+12<own))continue;
+  }
   const padded={x:p.x-4,y:p.y-4,width:p.width+8,height:p.height+8};
   if(obstacles.some(o=>overlaps(padded,o)))continue;
   const score=Math.hypot(p.x-box.x,p.y-box.y)+lines.filter(l=>crosses(padded,l)).length*24;

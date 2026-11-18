@@ -34,3 +34,15 @@ test('a grouped label avoids another label and stays near its owner',async()=>{
  assert.equal(overlaps(result,initial),false);
  assert.ok(Math.hypot(result.x-initial.x,result.y-initial.y)<=144);
 });
+
+test('edge clamping must not teleport a label far away from its owner',async()=>{
+ const {placeLabelWithin}=await import('../src/lib/label-placement.ts');
+ assert.equal(placeLabelWithin({x:-300,y:20,width:90,height:30},[],[],{x:0,y:0,width:320,height:300},64),null);
+});
+test('optional label yields when it would be attributed to a nearer neighbouring object',async()=>{
+ const {placeLabelWithin}=await import('../src/lib/label-placement.ts');
+ const box={x:160,y:60,width:80,height:28},owner={x:0,y:0,width:20,height:20},peer={x:180,y:10,width:20,height:20};
+ const bounds={x:0,y:0,width:320,height:240};
+ assert.equal(placeLabelWithin(box,[],[],bounds,0,{owner,peers:[peer]}),null);
+ assert.ok(placeLabelWithin(box,[],[],bounds,0,{owner:peer,peers:[owner]}));
+});
