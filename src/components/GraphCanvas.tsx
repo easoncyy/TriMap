@@ -105,19 +105,18 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
  }
  useEffect(()=>{
   if(!instance||!container.current)return;
-  let frame=0,previous={width:container.current.clientWidth,height:container.current.clientHeight};
+  let previous={width:container.current.clientWidth,height:container.current.clientHeight};
   const observer=new ResizeObserver(()=>{
-   cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
     const host=container.current;if(!host)return;
     const width=host.clientWidth,height=host.clientHeight;
+    if(width===previous.width&&height===previous.height)return;
     if(pendingReveal.current){arrangeLabels();}
     else if(autoFit.current)fitAll();
     else{const v=instance.getViewport();void instance.setViewport({...v,x:v.x+(width-previous.width)/2,y:v.y+(height-previous.height)/2},{duration:0}).then(arrangeLabels);}
     previous={width,height};
-   });
   });
   observer.observe(container.current);
-  return()=>{observer.disconnect();cancelAnimationFrame(frame);};
+  return()=>observer.disconnect();
  },[instance]);
  useEffect(()=>{
   setNodes(previous=>{
