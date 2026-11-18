@@ -13,3 +13,24 @@ test('segment collision handles vertical, diagonal and zero length rays',()=>{
  assert.ok(crosses(box,{a:{x:-10,y:-10},b:{x:110,y:40}}));
  assert.equal(crosses(box,{a:{x:200,y:0},b:{x:200,y:0}}),false);
 });
+
+test('bounded labels stay inside the viewport even at an edge',async()=>{
+ const {placeLabelWithin}=await import('../src/lib/label-placement.ts');
+ const bounds={x:12,y:12,width:300,height:180};
+ const result=placeLabelWithin({x:290,y:-20,width:130,height:40},[],[],bounds)!;
+ assert.ok(result.x>=12&&result.x+result.width<=312);
+ assert.ok(result.y>=12&&result.y+result.height<=192);
+});
+test('bounded labels yield instead of escaping a saturated viewport',async()=>{
+ const {placeLabelWithin}=await import('../src/lib/label-placement.ts');
+ const bounds={x:0,y:0,width:150,height:100};
+ assert.equal(placeLabelWithin({x:0,y:0,width:80,height:30},[bounds],[],bounds),null);
+ assert.equal(placeLabelWithin({x:0,y:0,width:180,height:30},[],[],bounds),null);
+});
+test('a grouped label avoids another label and stays near its owner',async()=>{
+ const {placeLabelWithin}=await import('../src/lib/label-placement.ts');
+ const initial={x:150,y:150,width:100,height:42};
+ const result=placeLabelWithin(initial,[initial],[],{x:0,y:0,width:600,height:400})!;
+ assert.equal(overlaps(result,initial),false);
+ assert.ok(Math.hypot(result.x-initial.x,result.y-initial.y)<=144);
+});

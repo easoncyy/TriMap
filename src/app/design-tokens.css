@@ -1,0 +1,30 @@
+/* Knowledge Observatory: UI-only values; knowledge/view mappings stay in model.ts. */
+:root {
+  --atlas-canvas: #11181c;
+  --atlas-chrome: #182126;
+  --atlas-raised: #243139;
+  --atlas-line: #40515a;
+  --atlas-ink: #e4eaed;
+  --atlas-muted: #aebdc5;
+  --atlas-reading: #e5e2da;
+  --atlas-reading-ink: #253239;
+  --atlas-reading-muted: #4c5c64;
+  --atlas-reading-line: #adb3b1;
+  --atlas-lens-domain: #9abdd4;
+  --atlas-lens-ecology: #91bba9;
+  --atlas-lens-cognition: #cfb47d;
+  --atlas-focus: #bdddf1;
+  --atlas-reading-focus: #345a70;
+  --atlas-status-pending: #76521e;
+  --atlas-body: 16px;
+  --atlas-control: 14px;
+  --atlas-label: 13px;
+  --atlas-touch: 44px;
+  --atlas-radius: 4px;
+  --atlas-s1: 4px;
+  --atlas-s2: 8px;
+  --atlas-s3: 12px;
+  --atlas-s4: 16px;
+  --atlas-s6: 24px;
+  --atlas-s8: 32px;
+}

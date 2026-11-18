@@ -3,11 +3,14 @@ import {useId} from 'react';
 import {Handle,Position,type NodeProps} from '@xyflow/react';
 
 
+const point = (p: {x: number; y: number}) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+const line = (points: {x: number; y: number}[]) => points.map(point).join(' L ');
+
 export function KnowledgePrism({data,selected}:NodeProps){
  const glass=useId().replace(/:/g,'');
  const color=String(data.color),root=!!data.lightSource;
  return <div className={`knowledge-node optical-node ${selected?'selected':''} ${root?'light-source':''}`} style={{'--node-color':color} as React.CSSProperties}>
- <Handle type="target" position={Position.Left}/><span className="node-kind">{root?'光源':String(data.kind)} · {String(data.dimension)}</span>
+ <Handle type="target" position={Position.Left}/>
  <svg viewBox="0 0 120 120" className="prism-shape" aria-hidden="true">
   <defs><linearGradient id={glass} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ecf7ff" stopOpacity=".85"/><stop offset=".35" stopColor="#9bbbd3" stopOpacity=".16"/><stop offset=".7" stopColor="#fafcff" stopOpacity=".5"/><stop offset="1" stopColor="#677b8f" stopOpacity=".45"/></linearGradient></defs>
   {root
@@ -23,7 +26,7 @@ export function KnowledgePrism({data,selected}:NodeProps){
       <path className="glass-highlight" d="M59 17L21 84M63 20L101 85"/>
      </g>}
  </svg>
- <strong>{String(data.title)}</strong><span className="optical-summary">{String(data.summary)}</span><span className="node-bottom">{String(data.connections)} 条关系</span><Handle type="source" position={Position.Right}/></div>;
+ <div className="graph-label"><strong>{String(data.title)}</strong><span className="node-kind">{root?'光源':String(data.kind)} · {String(data.dimension)}{data.contextAnchor?' · 探索锚点':''}</span></div><Handle type="source" position={Position.Right}/></div>;
 }
 
 export function RoutingMirror({data,selected}:NodeProps){
@@ -38,8 +41,8 @@ export function RoutingMirror({data,selected}:NodeProps){
    <circle className="mirror-pin" cx="38" cy="38" r="1.8"/>
   </svg>
   {typeof data.onToggle==='function'&&<button type="button" className="mirror-fold nodrag nopan" aria-expanded={!data.folded} aria-label={`${data.folded?'展开':'折叠'}关系：${String(data.title)}`} title={data.folded?`展开：${String(data.targetTitle||'下一层知识')}`:'折叠这条关系的下游'} onClick={event=>{event.stopPropagation();(data.onToggle as ()=>void)();}}>{data.folded?'+':'−'}</button>}
-  <span className="mirror-relation-name">{String(data.title)}</span>
-  {!!data.preview&&<small>目标预览 · 未发布</small>}
+  <div className="graph-label"><span className="mirror-relation-name">{String(data.title)}</span>
+  {!!data.preview&&<small>目标预览 · 未发布</small>}</div>
   <Handle type="source" position={Position.Right} isConnectable={selected} isConnectableStart={selected}/>
  </div>;
 }
