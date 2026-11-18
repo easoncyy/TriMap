@@ -16,6 +16,28 @@ export function lightPath(nodes:KnowledgeNode[],edges:Relation[],root:string,tar
  while(at!==root){const p=previous.get(at)!;path.unshift(p.node);relations.unshift(p.edge);at=p.node;}
  return {nodes:path,edges:relations};
 }
+/** All shortest root distances in one traversal for orienting the visible rays. */
+export function lightDepths(nodes:KnowledgeNode[],edges:Relation[],root:string){
+ const neighbours=new Map(nodes.map(node=>[node.id,[] as string[]]));
+ const depths=new Map<string,number>();
+ if(!neighbours.has(root))return depths;
+ for(const {source,target} of edges){
+  if(!neighbours.has(source)||!neighbours.has(target))continue;
+  if(target)neighbours.get(source)!.push(target);
+  if(source)neighbours.get(target)!.push(source);
+ }
+ const queue=[root];
+ depths.set(root,1);
+ for(let i=0;i<queue.length;i++){
+  const at=queue[i],depth=depths.get(at)!;
+  for(const next of neighbours.get(at)!){
+   if(depths.has(next))continue;
+   depths.set(next,depth+1);
+   queue.push(next);
+  }
+ }
+ return depths;
+}
 export function opticalView(nodes:KnowledgeNode[],edges:Relation[],lens:Lens,root:string,focus:string,mode:OpticalMode){
  const local=nodes.filter(n=>n.lens===lens),localIds=new Set(local.map(n=>n.id));
  const localEdges=edges.filter(e=>localIds.has(e.source)&&localIds.has(e.target));

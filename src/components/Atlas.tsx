@@ -1,25 +1,33 @@
 'use client';
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {Background,Controls,Handle,Position,type NodeProps} from '@xyflow/react';
+import {lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {Background} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import SpectralEdge from './SpectralEdge';
 import {KnowledgePrism,RoutingMirror} from './OpticalNodes';
-import {opticalView,lightPath,mirrorAngle,type Mirror,type Point} from '@/lib/optics';
+import {opticalView,lightPath,lightDepths,mirrorAngle,type Mirror,type Point} from '@/lib/optics';
 import GraphCanvas from './GraphCanvas';
 import type {CameraSnapshot,RevealRequest} from '@/lib/exploration-navigation';
 import ReadingPanel from './ReadingPanel';
 import {useInterfaceMotion} from '@/hooks/useInterfaceMotion';
 import {filterKnowledge} from '@/lib/graph-filter';
-import AtlasLibrary from './AtlasLibrary';
-import ConflictReview from './ConflictReview';
+
 import UsageGuide from './UsageGuide';
 import {foldedView} from '@/lib/folding';
-import {balancedLayout,extendPositions,routeFrontiers,primaryTree,LAYOUT_VERSION,routeMirrors} from '@/lib/layout';
+import {balancedLayout,extendPositions,routeFrontiers,primaryTree,LAYOUT_VERSION,layoutPrisms,routeMirrors} from '@/lib/layout';
 import {graphChanges} from '@/lib/diff';
 import {EXPLORATION_VERSION,parseExploration,emptyExploration,loadExploration,mirrorViewKey,readCheckpoint,writeCheckpoint,writeExploration,type ExplorationState} from '@/lib/exploration';
 import {ArrowUpRight,ArrowLeft,Search,Plus,SlidersHorizontal,MessageSquare,GitBranch,X,Download,Check,Layers,Compass,History,Lock,ChevronRight,Send,Maximize2,Minimize2} from 'lucide-react';
 import {lenses,type Lens,type KnowledgeNode,type Relation,type Store,type AtlasMeta} from '@/lib/model';
 type Snapshot=Omit<Store,'revisions'>&{contentVersion?:string;meta:AtlasMeta;revisions:{id:string;date:string;reason:string;changes?:string[]}[]};
+const AtlasLibrary=lazy(()=>import('./AtlasLibrary'));
+const ConflictReview=lazy(()=>import('./ConflictReview'));
+const EMPTY_NODES:KnowledgeNode[]=[];
+const EMPTY_EDGES:Relation[]=[];
+function LoadingDialog({close}:{close:()=>void}){
+ return <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label="正在加载">
+  <p role="status">正在加载…</p><button onClick={close}>关闭</button>
+ </section></div>;
+}
 const nodeTypes={spectral:KnowledgePrism,mirror:RoutingMirror};
 const edgeTypes={spectral:SpectralEdge};
 const lensColor=(lens:Lens)=>`var(--atlas-lens-${lens})`;
@@ -34,12 +42,13 @@ export default function Atlas(){
  const [allRelations,setAllRelations]=useState(false),[manualPositions,setManualPositions]=useState<string[]>([]);
  const [layoutEpoch,setLayoutEpoch]=useState(0);
  const [explorerOpen,setExplorerOpen]=useState(false);
+ const [modeMotion,enableModeMotion]=useState(false),[explorerMotion,enableExplorerMotion]=useState(false);
  const [immersive,setImmersive]=useState(false),[wide,setWide]=useState(false);
  const immersiveRef=useRef(false);immersiveRef.current=immersive;
  const modeToggle=useRef<HTMLButtonElement>(null);
  const workspaceShell=useRef<HTMLDivElement>(null);
- useInterfaceMotion(workspaceShell,immersive,true,'.canvas-toolbar,.tool-main');
- useInterfaceMotion(workspaceShell,explorerOpen,explorerOpen,'#exploration-panel');
+ useInterfaceMotion(workspaceShell,immersive,modeMotion,'.canvas-toolbar,.tool-main');
+ useInterfaceMotion(workspaceShell,explorerOpen,explorerOpen&&explorerMotion,'#exploration-panel');
  const workbenchPanels=useRef({explorer:false,detail:false});
  const explorerToggle=useRef<HTMLButtonElement>(null);
  const closeDetail=useCallback(()=>{setDetailOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-controls="knowledge-reading"]')?.focus());},[]);
@@ -81,7 +90,7 @@ export default function Atlas(){
  useEffect(()=>{if(notice){const t=setTimeout(()=>setNotice(''),4500);return()=>clearTimeout(t);}},[notice]);
  const canEdit=store?.meta.canEdit||false;
  const graph=canEdit&&store?.draft?store.draft:store;
- const allNodes=graph?.nodes||[],allEdges=graph?.relations||[];
+ const allNodes=graph?.nodes||EMPTY_NODES,allEdges=graph?.relations||EMPTY_EDGES;
  const selected=allNodes.find(n=>n.id===focus),selectedEdge=allEdges.find(e=>e.id===edgeId);
  const related=allEdges.filter(e=>e.source===focus||e.target===focus);
  const same=related.filter(e=>allNodes.find(n=>n.id===(e.source===focus?e.target:e.source))?.lens===lens);
@@ -94,6 +103,7 @@ export default function Atlas(){
  const candidate=useMemo(()=>opticalView(allNodes,allEdges,lens,root,focus,prismMode),[allNodes,allEdges,lens,root,focus,prismMode]);
  const candidateNodes=candidate.nodes,candidateEdges=candidate.edges;
  const [located,setLocated]=useState<string|null>(null);
+ const [navigationEdge,setNavigationEdge]=useState<string|null>(null);
  const folded=useMemo(()=>{
   const overrides=folds[foldKey]||{};
   const route=located&&lightPath(candidateNodes,candidateEdges,explorationRoot,located);
@@ -102,17 +112,19 @@ export default function Atlas(){
  },[candidateNodes,candidateEdges,explorationRoot,folds,foldKey,located]);
  const searching=!!query.trim()||kind!=='全部类型'||list||expanded;
  const optical=useMemo(()=>{
-  const isolated=located&&!folded.depth.has(located)?candidateNodes.filter(n=>n.id===located):[];
-  return {nodes:searching?candidateNodes:[...folded.nodes,...isolated],edges:searching?candidateEdges:folded.edges,path:candidate.path};
- },[located,folded,candidateNodes,candidateEdges,searching,candidate.path]);
- function toggleFold(id:string,open:boolean){setLocated(null);setFolds(previous=>({...previous,[foldKey]:{...previous[foldKey],[id]:open}}));}
- const previewTargets=mirrors.filter(m=>m.view===mirrorKey&&optical.edges.some(e=>e.id===m.edgeId)).map(m=>allNodes.find(n=>n.id===m.targetId)).filter((n):n is KnowledgeNode=>!!n);
- const projection=[...optical.nodes,...previewTargets.filter(n=>!optical.nodes.some(o=>o.id===n.id))];
- const {visible,matches,anchors,filtering}=filterKnowledge(linking?allNodes:projection,linking?allEdges:optical.edges,{query,kind,root,focus,expanded});
+  const connection=candidateEdges.find(edge=>edge.id===navigationEdge);
+  const targets=new Set([located,connection?.source,connection?.target]);
+  const extra=candidateNodes.filter(n=>targets.has(n.id)&&!folded.depth.has(n.id));
+  const edges=connection&&!folded.edges.some(e=>e.id===connection.id)?[...folded.edges,connection]:folded.edges;
+  return {nodes:searching?candidateNodes:[...folded.nodes,...extra],edges:searching?candidateEdges:edges,path:candidate.path};
+ },[located,navigationEdge,folded,candidateNodes,candidateEdges,searching,candidate.path]);
+ function toggleFold(id:string,open:boolean){setNavigationEdge(null);setLocated(null);setFolds(previous=>({...previous,[foldKey]:{...previous[foldKey],[id]:open}}));}
+ const previewTargets=useMemo(()=>mirrors.filter(m=>m.view===mirrorKey&&optical.edges.some(e=>e.id===m.edgeId)).map(m=>allNodes.find(n=>n.id===m.targetId)).filter((n):n is KnowledgeNode=>!!n),[mirrors,mirrorKey,optical.edges,allNodes]);
+ const projection=useMemo(()=>[...optical.nodes,...previewTargets.filter(n=>!optical.nodes.some(o=>o.id===n.id))],[optical.nodes,previewTargets]);
+ const {visible,matches,anchors,filtering}=useMemo(()=>filterKnowledge(linking?allNodes:projection,linking?allEdges:optical.edges,{query,kind,root,focus,expanded}),[linking,allNodes,projection,allEdges,optical.edges,query,kind,root,focus,expanded]);
  const [reveal,setReveal]=useState<RevealRequest|null>(null);
  const camera=useRef<CameraSnapshot|null>(null);
  const trailViews=useRef<Array<{camera:CameraSnapshot|null;lens:Lens;prismMode:'dispersion'|'refraction';expanded:boolean;linking:boolean;query:string;kind:string}>>([]);
- const [navigationEdge,setNavigationEdge]=useState<string|null>(null);
  const recordVisit=()=>{trailViews.current=[...trailViews.current,{camera:camera.current,lens,prismMode,expanded,linking,query,kind}].slice(-20);setTrail(t=>[...t,focus].slice(-20));};
  const revealEpoch=useRef(0);
  function revealKnowledge(id:string){navigate(id);}
@@ -126,9 +138,11 @@ export default function Atlas(){
   if(immersive||window.innerWidth<1200)closeExplorer();
   setReveal({id:previous,epoch:++revealEpoch.current,restore:saved?.camera||undefined});
  }
- const defaultLayout=balancedLayout(linking?allNodes:candidateNodes,linking?allEdges:candidateEdges,explorationRoot);
- const savedViewPositions=prismMode==='refraction'?Object.fromEntries(Object.entries(refractedPositions).filter(([key])=>key.startsWith(viewKey+':')).map(([key,p])=>[key.slice(viewKey.length+1),p])):positions;
- const stablePositions=extendPositions(defaultLayout.prisms,savedViewPositions);
+ const layoutNodes=linking?allNodes:candidateNodes,layoutEdges=linking?allEdges:candidateEdges;
+ const pathTree=useMemo(()=>primaryTree(layoutNodes,layoutEdges,explorationRoot),[layoutNodes,layoutEdges,explorationRoot]);
+ const defaultPositions=useMemo(()=>layoutPrisms(layoutNodes,pathTree,explorationRoot),[layoutNodes,pathTree,explorationRoot]);
+ const savedViewPositions=useMemo(()=>prismMode==='refraction'?Object.fromEntries(Object.entries(refractedPositions).filter(([key])=>key.startsWith(viewKey+':')).map(([key,p])=>[key.slice(viewKey.length+1),p])):positions,[prismMode,refractedPositions,viewKey,positions]);
+ const stablePositions=useMemo(()=>extendPositions(defaultPositions,savedViewPositions),[defaultPositions,savedViewPositions]);
  useEffect(()=>{
   if(!ready||!store||linking)return;
   const missing=candidateNodes.filter(n=>!savedViewPositions[n.id]);
@@ -145,22 +159,45 @@ export default function Atlas(){
   }
   return stablePositions[n.id]||{x:n.x,y:n.y};
  }
- const flowKnowledge=visible.map(n=>({id:n.id,type:'spectral',ariaLabel:'知识：'+n.title,position:displayedPosition(n),selected:n.id===focus&&!mirrorId,data:{...n,contextAnchor:anchors.some(a=>a.id===n.id),lightSource:n.id===root,dimension:lenses[n.lens].name,color:lensColor(n.lens),connections:allEdges.filter(e=>e.source===n.id||e.target===n.id).length,beam:null as {in:Point|null;out:Point|null}|null}}));
- const visibleIds=new Set(visible.map(n=>n.id));
- const pathTree=primaryTree(candidateNodes,candidateEdges,explorationRoot);
+ const graphPositions=useMemo(()=>Object.fromEntries(visible.map(n=>[n.id,displayedPosition(n)])),[visible,linking,positions,prismMode,refractedPositions,viewKey,stablePositions]);
+ const flowKnowledge=visible.map(n=>({id:n.id,type:'spectral',ariaLabel:'知识：'+n.title,position:graphPositions[n.id],selected:n.id===focus&&!mirrorId,data:{...n,contextAnchor:anchors.some(a=>a.id===n.id),lightSource:n.id===root,dimension:lenses[n.lens].name,color:lensColor(n.lens)}}));
+ const visibleIds=useMemo(()=>new Set(visible.map(n=>n.id)),[visible]);
  const secondaryCount=optical.edges.filter(e=>!pathTree.treeEdges.has(e.id)).length;
- const opticalEdges=(linking?allEdges:optical.edges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge)).filter(e=>visibleIds.has(e.source)&&visibleIds.has(e.target));
- const center=(id:string):Point=>{const p=flowKnowledge.find(n=>n.id===id)?.position||{x:0,y:0};return {x:p.x+100,y:p.y+(id===root?72:80)};};
- function lightEndpoints(e:Relation){const a=folded.depth.get(e.source)??999,b=folded.depth.get(e.target)??999;return a<=b?{source:e.source,target:e.target}:{source:e.target,target:e.source};}
- const routed=routeMirrors(linking?Object.fromEntries(flowKnowledge.map(n=>[n.id,n.position])):stablePositions,candidateEdges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge));
- const activeMirrors=opticalEdges.map(e=>{const saved=mirrors.find(m=>m.view===mirrorKey&&m.edgeId===e.id);if(saved)return {...saved,targetId:allNodes.some(n=>n.id===saved.targetId)?saved.targetId:undefined};const ends=lightEndpoints(e),a=center(ends.source),b=center(ends.target);const siblings=opticalEdges.filter(x=>[x.source,x.target].sort().join('/')===[e.source,e.target].sort().join('/'));const lane=(siblings.findIndex(x=>x.id===e.id)-(siblings.length-1)/2)*85;const length=Math.hypot(b.x-a.x,b.y-a.y)||1;return {id:'mirror:'+e.id,edgeId:e.id,view:mirrorKey,position:routed[e.id]||{x:(a.x+b.x)/2-38-(b.y-a.y)/length*lane,y:(a.y+b.y)/2-38+(b.x-a.x)/length*lane},angle:0} as Mirror;});
+ const routeEdges=useMemo(()=>candidateEdges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge),[candidateEdges,allRelations,pathTree,edgeId,navigationEdge]);
+ const opticalEdges=useMemo(()=>(linking?allEdges:optical.edges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge)).filter(e=>visibleIds.has(e.source)&&visibleIds.has(e.target)),[linking,allEdges,optical.edges,allRelations,pathTree,edgeId,navigationEdge,visibleIds]);
+ const center=(id:string):Point=>{const p=graphPositions[id]||{x:0,y:0};return {x:p.x+100,y:p.y+(id===root?72:80)};};
+ const depths=useMemo(()=>searching?lightDepths(candidateNodes,candidateEdges,explorationRoot):folded.depth,[searching,candidateNodes,candidateEdges,explorationRoot,folded]);
+ function lightEndpoints(e:Relation){
+  return (depths.get(e.source)??999)<=(depths.get(e.target)??999)
+   ?{source:e.source,target:e.target}:{source:e.target,target:e.source};
+ }
+ const routePositions=linking?graphPositions:stablePositions;
+ const routed=useMemo(()=>routeMirrors(routePositions,linking?allEdges:routeEdges),[routePositions,linking,allEdges,routeEdges]);
+ const savedMirrors=useMemo(()=>new Map(mirrors.filter(m=>m.view===mirrorKey).map(m=>[m.edgeId,m])),[mirrors,mirrorKey]);
+ const activeMirrors=opticalEdges.map(e=>{
+  const saved=savedMirrors.get(e.id);
+  if(saved)return {...saved,targetId:allNodes.some(n=>n.id===saved.targetId)?saved.targetId:undefined};
+  return {id:'mirror:'+e.id,edgeId:e.id,view:mirrorKey,position:routed[e.id],angle:0} as Mirror;
+ });
+ const mirrorsByEdge=new Map(activeMirrors.map(m=>[m.edgeId,m]));
+ const outgoing=new Map<string,string[]>();
+ for(const edge of opticalEdges){
+  const {source}=lightEndpoints(edge);
+  const siblings=outgoing.get(source)||[];
+  siblings.push(edge.id);
+  outgoing.set(source,siblings);
+ }
+ const branches=new Map<string,{index:number;count:number}>();
+ for(const siblings of outgoing.values()){
+  siblings.sort((a,b)=>a.localeCompare(b));
+  siblings.forEach((id,index)=>branches.set(id,{index,count:siblings.length}));
+ }
  function updateMirror(id:string,changes:Partial<Mirror>){const m=activeMirrors.find(m=>m.id===id);if(m)setMirrors(ms=>[...ms.filter(x=>!(x.edgeId===m.edgeId&&x.view===m.view)),{...m,...changes,manual:true}]);}
  const litKnowledge=flowKnowledge;
  const flowEdges=opticalEdges.flatMap(e=>{
-  const endpoints=lightEndpoints(e),m=activeMirrors.find(m=>m.edgeId===e.id);
-  const siblings=opticalEdges.filter(other=>lightEndpoints(other).source===endpoints.source).sort((a,b)=>a.id.localeCompare(b.id));
-  const branch=siblings.findIndex(other=>other.id===e.id);
-  const color=endpoints.source===root?'#efeee4':`hsl(${Math.round(branch*300/Math.max(1,siblings.length-1))} 72% 68%)`;
+  const endpoints=lightEndpoints(e),m=mirrorsByEdge.get(e.id);
+  const {index,count}=branches.get(e.id)!;
+  const color=endpoints.source===root?'#efeee4':`hsl(${Math.round(index*300/Math.max(1,count-1))} 72% 68%)`;
   const base={type:'spectral',className:e.id===navigationEdge?'navigation-ray':undefined,selectable:false,focusable:false,data:{relationId:e.id,active:e.id===hoveredEdge||e.id===edgeId||e.id===navigationEdge,color}};
   return m?[{...base,id:e.id+':in',source:endpoints.source,target:m.id,label:undefined},{...base,id:e.id+':out',source:m.id,target:m.targetId||endpoints.target,label:undefined,data:{...base.data,spectral:e.id===edgeId}}]:[{...base,id:e.id,...endpoints,label:undefined}];
  });
@@ -169,9 +206,9 @@ export default function Atlas(){
  const suggestedTarget=chosenMirror?.targetId||null;
  function connectMirror(id:string,target:string){const m=activeMirrors.find(m=>m.id===id),e=allEdges.find(e=>e.id===m?.edgeId);if(!m||!e)return;const incoming=lightEndpoints(e).source;if(target===incoming||!allNodes.some(n=>n.id===target)){setError('请选择入射节点以外的知识棱镜');return;}setExpanded(false);setQuery('');setKind('全部类型');updateMirror(id,{targetId:target});setMirrorId(id);setRedirectTarget(target);setPickingMirror(false);setNotice('光线已连接到目标；如需修改知识关系，请保存为关系草稿');}
  const mirrorNodes=activeMirrors.map(m=>{const e=allEdges.find(e=>e.id===m.edgeId)!,ends=lightEndpoints(e);return {id:m.id,type:'mirror',className:e.id===navigationEdge?'navigation-mirror':undefined,ariaLabel:'关系：'+e.label,zIndex:3000,position:m.position,selected:m.id===mirrorId,data:{title:e.label,preview:!!m.targetId&&m.targetId!==ends.target,folded:false,onToggle:()=>toggleFold(e.id,false),angle:mirrorAngle(center(ends.source),{x:m.position.x+38,y:m.position.y+38},center(m.targetId||ends.target))}};});
- const frontier=linking||searching?[]:folded.frontier.filter(f=>visibleIds.has(f.source));
- const frontierPositions=routeFrontiers(Object.fromEntries(flowKnowledge.map(n=>[n.id,n.position])),frontier,explorationRoot,Object.fromEntries(activeMirrors.map(m=>[m.edgeId,m.position])));
- const frontierNodes=frontier.map(f=>{const saved=mirrors.find(m=>m.edgeId===f.edge.id&&m.view===mirrorKey);const position=saved?.position||frontierPositions[f.edge.id];return {id:'frontier:'+f.edge.id,type:'mirror',ariaLabel:'关系：'+f.edge.label,position,zIndex:3000,selected:mirrorId==='frontier:'+f.edge.id,data:{title:f.edge.label,relationId:f.edge.id,folded:true,targetTitle:allNodes.find(n=>n.id===f.target)?.title,onToggle:()=>toggleFold(f.edge.id,true),angle:35}};});
+ const frontier=useMemo(()=>linking||searching?[]:folded.frontier.filter(f=>visibleIds.has(f.source)&&f.edge.id!==navigationEdge),[linking,searching,folded,visibleIds,navigationEdge]);
+ const frontierPositions=useMemo(()=>frontier.every(f=>savedMirrors.has(f.edge.id))?{}:routeFrontiers(graphPositions,frontier,explorationRoot,Object.fromEntries(opticalEdges.map(e=>[e.id,savedMirrors.get(e.id)?.position||routed[e.id]]))),[graphPositions,frontier,explorationRoot,savedMirrors,routed,opticalEdges]);
+ const frontierNodes=frontier.map(f=>{const saved=savedMirrors.get(f.edge.id);const position=saved?.position||frontierPositions[f.edge.id];return {id:'frontier:'+f.edge.id,type:'mirror',ariaLabel:'关系：'+f.edge.label,position,zIndex:3000,selected:mirrorId==='frontier:'+f.edge.id,data:{title:f.edge.label,relationId:f.edge.id,folded:true,targetTitle:allNodes.find(n=>n.id===f.target)?.title,onToggle:()=>toggleFold(f.edge.id,true),angle:35}};});
  // Persist automatic mirror positions too: folding changes visibility, never the layout.
  useEffect(()=>{
   if(!ready||!store||linking)return;
@@ -239,6 +276,7 @@ export default function Atlas(){
   requestAnimationFrame(()=>modeToggle.current?.focus());
  },[]);
  function toggleImmersive(){
+  enableModeMotion(true);
   if(immersive){exitImmersive();return;}
   workbenchPanels.current={explorer:explorerOpen,detail:detailOpen};
   setExplorerOpen(false);setDetailOpen(false);setImmersive(true);
@@ -290,9 +328,9 @@ export default function Atlas(){
   if(!(target instanceof HTMLElement)||!target.matches('.react-flow__node'))return;
   const node=flowNodes.find(item=>item.id===target.dataset.id);
   if(node){event.preventDefault();event.stopPropagation();selectGraphObject(node);}
- }}><div className="canvas-toolbar"><div><button ref={modeToggle} className="mode-toggle" aria-label={immersive?'返回工作区':'进入沉浸探索'} aria-pressed={immersive} onClick={toggleImmersive}>{immersive?<Minimize2 size={16}/>:<Maximize2 size={16}/>}<span className="mode-label">{immersive?'返回工作区':'沉浸探索'}</span><span className="mode-label-compact" aria-hidden="true">{immersive?'返回':'沉浸'}</span></button><button ref={explorerToggle} className="explorer-toggle" aria-expanded={explorerOpen} aria-controls="exploration-panel" onClick={()=>{setExplorerOpen(!explorerOpen);if(!explorerOpen)requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('#exploration-panel input')?.focus());}}><Search size={16}/>探索</button><span className="live-dot"/> {lenses[lens].en} <span className="muted">/ {visible.length} 个节点 · {opticalEdges.length} 条关系</span></div><div><button aria-label={detailOpen?'收起阅读面板':'打开阅读面板'} aria-expanded={detailOpen} aria-controls="knowledge-reading" onClick={()=>setDetailOpen(!detailOpen)}><SlidersHorizontal size={16}/><span className="reading-toggle-label">阅读</span></button><button className={!list?'active-toggle':''} onClick={()=>setList(false)}>图谱</button><button className={list?'active-toggle':''} onClick={()=>setList(true)}>列表</button>{canEdit&&<button className="add-button" onClick={newNode}><Plus size={14}/>节点</button>}</div></div>
+ }}><div className="canvas-toolbar"><div><button ref={modeToggle} className="mode-toggle" aria-label={immersive?'返回工作区':'进入沉浸探索'} aria-pressed={immersive} onClick={toggleImmersive}>{immersive?<Minimize2 size={16}/>:<Maximize2 size={16}/>}<span className="mode-label">{immersive?'返回工作区':'沉浸探索'}</span><span className="mode-label-compact" aria-hidden="true">{immersive?'返回':'沉浸'}</span></button><button ref={explorerToggle} className="explorer-toggle" aria-expanded={explorerOpen} aria-controls="exploration-panel" onClick={()=>{enableExplorerMotion(true);setExplorerOpen(!explorerOpen);if(!explorerOpen)requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('#exploration-panel input')?.focus());}}><Search size={16}/>探索</button><span className="live-dot"/> {lenses[lens].en} <span className="muted">/ {visible.length} 个节点 · {opticalEdges.length} 条关系</span></div><div><button aria-label={detailOpen?'收起阅读面板':'打开阅读面板'} aria-expanded={detailOpen} aria-controls="knowledge-reading" onClick={()=>setDetailOpen(!detailOpen)}><SlidersHorizontal size={16}/><span className="reading-toggle-label">阅读</span></button><button className={!list?'active-toggle':''} onClick={()=>setList(false)}>图谱</button><button className={list?'active-toggle':''} onClick={()=>setList(true)}>列表</button>{canEdit&&<button className="add-button" onClick={newNode}><Plus size={14}/>节点</button>}</div></div>
  {canEdit&&<div className="draft-bar"><span>{store.draft?'正在预览未发布草稿':store.meta.owned?'个人编辑 · 当前为已发布内容':'维护模式 · 当前为已发布内容'}</span><button onClick={()=>{setEdgeForm({id:crypto.randomUUID(),source:selected?.id||allNodes[0]?.id||'',target:allNodes.find(n=>n.id!==(selected?.id||allNodes[0]?.id))?.id||'',label:'关联',reason:''});setLinking(true);beginRelation();}}>建立关系</button><button onClick={()=>mutate({action:'draft',nodes:allNodes.map(n=>({...n,...(positions[n.id]||{})})),relations:allEdges},'布局已保存为草稿')}>保存当前布局</button>{store.draft&&<><button onClick={()=>mutate({action:'discard'},'草稿已丢弃')}>丢弃草稿</button><button className="publish" onClick={()=>openEditor('publish')}>审核发布</button></>}</div>}
- {filtering&&<div className="filter-status" role="status">{matches.length===0?'没有匹配的知识':`找到 ${matches.length} 个匹配知识`}{anchors.length>0&&<span>另保留 {anchors.length} 个探索锚点，未计入结果</span>}<button onClick={()=>{setQuery('');setKind('全部类型');}}>清除筛选</button></div>}<div className="canvas-content">{lensSweep>0&&<span key={lensSweep} className="gel-sweep" style={{'--gel':lensColor(lens)} as React.CSSProperties} aria-hidden="true"/>}{visible.length===0?<div className="empty-state"><Search size={28}/><h3>没有匹配的知识</h3><p>换一个关键词，或清除筛选后继续探索。</p><button onClick={()=>{setQuery('');setKind('全部类型');setExpanded(false);}}>清除筛选</button></div>:list?<div className="node-list">{(filtering?matches:visible).map(n=><button key={n.id} onClick={()=>revealKnowledge(n.id)}><span className="node-kind">{n.kind} · {n.status}</span><h3>{n.title}<ArrowUpRight size={17}/></h3><p>{n.summary}</p></button>)}</div>:<GraphCanvas onViewChange={snapshot=>{camera.current=snapshot;}} key={`${lens}-${expanded}-${linking}-${prismMode}-${layoutEpoch}`} reveal={reveal} onRevealHandled={epoch=>setReveal(previous=>previous?.epoch===epoch?null:previous)} nodes={flowNodes} edges={[...flowEdges,...frontierEdges]} nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.02} maxZoom={1.8} onNodeMouseEnter={(_,n)=>{if(n.type==='mirror')setHoveredEdge(String(n.data.relationId||activeMirrors.find(m=>m.id===n.id)?.edgeId||''));}} onNodeMouseLeave={()=>setHoveredEdge(null)} onNodeClick={(_,n)=>selectGraphObject(n)} onNodeDragStart={(_,n)=>{setNavigationEdge(null);setPickingMirror(false);setRedirectTarget('');if(n.type==='mirror'){setMirrorId(n.id);setEdgeId(activeMirrors.find(m=>m.id===n.id)?.edgeId||(n.id.startsWith('frontier:')?n.id.slice(9):null));}else{setMirrorId(null);setEdgeId(null);setFocus(n.id);}}} onNodeDragStop={(_,n)=>{if(n.type==='mirror'){if(n.id.startsWith('frontier:')){const id=n.id.slice(9);setMirrors(ms=>[...ms.filter(m=>!(m.edgeId===id&&m.view===mirrorKey)),{id:'mirror:'+id,edgeId:id,view:mirrorKey,position:n.position,angle:0,manual:true}]);}else updateMirror(n.id,{position:n.position});return;}setManualPositions(ids=>[...new Set([...ids,prismMode==='refraction'&&!linking?viewKey+':'+n.id:n.id])]);if(prismMode==='refraction'&&!linking){setRefractedPositions(p=>({...p,[viewKey+':'+n.id]:n.position}));return;}setPositions(p=>({...p,[n.id]:{x:n.position.x-(linking?['domain','ecology','cognition'].indexOf(allNodes.find(item=>item.id===n.id)?.lens||lens)*1150:0),y:n.position.y}}));}}  nodesConnectable={(canEdit&&linking)||!!mirrorId} connectionRadius={35} onPaneClick={()=>{setDetailOpen(false);setPickingMirror(false);}} onConnect={connection=>{if(connection.source?.startsWith('mirror:')&&connection.target){connectMirror(connection.source,connection.target);return;}if(!canEdit)return;if(!connection.source||!connection.target||connection.source===connection.target)return;const existing=allEdges.find(e=>e.source===connection.source&&e.target===connection.target);setEdgeForm(existing?{...existing}:{id:crypto.randomUUID(),source:connection.source,target:connection.target,label:'关联',reason:''});beginRelation();}} deleteKeyCode={null} colorMode="dark"><Background color="#3b3b51" gap={24} size={1}/></GraphCanvas>}
+ {filtering&&<div className="filter-status" role="status">{matches.length===0?'没有匹配的知识':`找到 ${matches.length} 个匹配知识`}{anchors.length>0&&<span>另保留 {anchors.length} 个探索锚点，未计入结果</span>}<button onClick={()=>{setQuery('');setKind('全部类型');}}>清除筛选</button></div>}<div className="canvas-content">{lensSweep>0&&<span key={lensSweep} className="gel-sweep" style={{'--gel':lensColor(lens)} as React.CSSProperties} aria-hidden="true"/>}{visible.length===0?<div className="empty-state"><Search size={28}/><h3>没有匹配的知识</h3><p>换一个关键词，或清除筛选后继续探索。</p><button onClick={()=>{setQuery('');setKind('全部类型');setExpanded(false);}}>清除筛选</button></div>:list?<div className="node-list">{(filtering?matches:visible).map(n=><button key={n.id} onClick={()=>revealKnowledge(n.id)}><span className="node-kind">{n.kind} · {n.status}</span><h3>{n.title}<ArrowUpRight size={17}/></h3><p>{n.summary}</p></button>)}</div>:<GraphCanvas fitScope={JSON.stringify([atlasId,lens,prismMode,explorationRoot,kind,query,expanded,linking])} onViewChange={snapshot=>{camera.current=snapshot;}} key={`${lens}-${expanded}-${linking}-${prismMode}-${layoutEpoch}`} reveal={reveal} onRevealHandled={epoch=>setReveal(previous=>previous?.epoch===epoch?null:previous)} nodes={flowNodes} edges={[...flowEdges,...frontierEdges]} nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.02} maxZoom={1.8} onNodeMouseEnter={(_,n)=>{if(n.type==='mirror')setHoveredEdge(String(n.data.relationId||activeMirrors.find(m=>m.id===n.id)?.edgeId||''));}} onNodeMouseLeave={()=>setHoveredEdge(null)} onNodeClick={(_,n)=>selectGraphObject(n)} onNodeDragStart={(_,n)=>{setNavigationEdge(null);setPickingMirror(false);setRedirectTarget('');if(n.type==='mirror'){setMirrorId(n.id);setEdgeId(activeMirrors.find(m=>m.id===n.id)?.edgeId||(n.id.startsWith('frontier:')?n.id.slice(9):null));}else{setMirrorId(null);setEdgeId(null);setFocus(n.id);}}} onNodeDragStop={(_,n)=>{if(n.type==='mirror'){if(n.id.startsWith('frontier:')){const id=n.id.slice(9);setMirrors(ms=>[...ms.filter(m=>!(m.edgeId===id&&m.view===mirrorKey)),{id:'mirror:'+id,edgeId:id,view:mirrorKey,position:n.position,angle:0,manual:true}]);}else updateMirror(n.id,{position:n.position});return;}setManualPositions(ids=>[...new Set([...ids,prismMode==='refraction'&&!linking?viewKey+':'+n.id:n.id])]);if(prismMode==='refraction'&&!linking){setRefractedPositions(p=>({...p,[viewKey+':'+n.id]:n.position}));return;}setPositions(p=>({...p,[n.id]:{x:n.position.x-(linking?['domain','ecology','cognition'].indexOf(allNodes.find(item=>item.id===n.id)?.lens||lens)*1150:0),y:n.position.y}}));}}  nodesConnectable={(canEdit&&linking)||!!mirrorId} connectionRadius={35} onPaneClick={()=>{setDetailOpen(false);setPickingMirror(false);}} onConnect={connection=>{if(connection.source?.startsWith('mirror:')&&connection.target){connectMirror(connection.source,connection.target);return;}if(!canEdit)return;if(!connection.source||!connection.target||connection.source===connection.target)return;const existing=allEdges.find(e=>e.source===connection.source&&e.target===connection.target);setEdgeForm(existing?{...existing}:{id:crypto.randomUUID(),source:connection.source,target:connection.target,label:'关联',reason:''});beginRelation();}} deleteKeyCode={null} colorMode="dark"><Background color="#3b3b51" gap={24} size={1}/></GraphCanvas>}
  <div className="canvas-caption"><span>△</span>拖动探索空间 · 点击节点色散 · 沿关联折射<button onClick={()=>setPositions({})}>重置布局</button></div></div>
  <footer className="canvas-footer"><span><i style={{background:lensColor(lens)}}/>当前滤光片：{lenses[lens].name}</span><span>节点颜色随观察视角变化</span></footer></section>
  {/* The modal explorer temporarily owns focus; retain the requested reading state for its return. */}
@@ -309,7 +347,7 @@ export default function Atlas(){
  <div className="spectrum-tools" role="toolbar" aria-label="光谱工具栏"><div className="tool-main">{immersive&&<div className="immersive-selection"><span>{chosenMirror?'当前关系':'当前知识'}</span><button onClick={()=>{setDetailOpen(true);setPanel('detail');}}>{selectedEdge?.label||selected?.title||'选择知识节点'}<ArrowUpRight size={16}/></button></div>}<button className="workbench-action" onClick={autoLayout}>自动布局</button><button className={`workbench-action ${prismMode==='dispersion'?'tool-active':''}`} onClick={()=>{setPrismMode('dispersion');setLinking(false);setExpanded(false);setMirrorId(null);}}>色散</button><button disabled={!selected} className={`workbench-action ${prismMode==='refraction'?'tool-active':''}`} onClick={()=>{setPrismMode('refraction');setLinking(false);setExpanded(false);setQuery('');setKind('全部类型');setMirrorId(null);}}>折射</button><details className="workspace-tools" onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.currentTarget.open=false;e.currentTarget.querySelector('summary')?.focus();}}}><summary>探索工具</summary><div className="workspace-tool-menu" onClick={e=>{if((e.target as HTMLElement).closest('button')){const details=e.currentTarget.closest('details');if(details){details.open=false;details.querySelector('summary')?.focus();}}}}>{immersive&&<><button onClick={autoLayout}>自动布局</button><button aria-pressed={prismMode==='dispersion'} onClick={()=>{setPrismMode('dispersion');setLinking(false);setExpanded(false);setMirrorId(null);}}>色散 · 同图关联</button><button disabled={!selected} aria-pressed={prismMode==='refraction'} onClick={()=>{setPrismMode('refraction');setLinking(false);setExpanded(false);setQuery('');setKind('全部类型');setMirrorId(null);}}>折射 · 跨图探索</button></>}<button onClick={()=>{if(selected?.lens===lens)setRoots(r=>({...r,[lens]:selected.id}));else setNotice('请选择当前地图中的知识作为光源');}}>设为光源</button><button className={allRelations?'tool-active':''} onClick={()=>setAllRelations(value=>!value)}>{allRelations?'全部关系':'主路径'} · {secondaryCount} 条补充关联</button><button onClick={()=>{const old=parseExploration(readLocal('spectrum-layout-backup:'+atlasId));if(!old){setNotice('暂无旧布局备份');return;}applyExploration({...old,layoutVersion:LAYOUT_VERSION,manualPositions:[...Object.keys(old.positions),...Object.keys(old.refractedPositions)],mirrors:old.mirrors.map(m=>({...m,manual:true}))});setLayoutEpoch(n=>n+1);setNotice('已恢复旧布局；如仍拥挤可点击自动布局');}}>恢复旧布局</button><button onClick={()=>{setLocated(null);setFolds(previous=>({...previous,[foldKey]:{}}));}}>收起至两层</button><button onClick={placeMirror}>关系镜</button><button onClick={saveExploration}>保存探索</button><button onClick={restoreExploration}>恢复探索</button><button onClick={()=>setLibrary(true)}><Layers size={15}/>图谱空间</button><button onClick={()=>setList(!list)}>{list?'图谱':'列表'}</button><button onClick={()=>setPositions({})}>重置布局</button><button onClick={()=>{setDetailOpen(true);setPanel('history');}}><History size={14}/>更新</button><button onClick={openFeedback}><MessageSquare size={14}/>反馈</button>{canEdit&&<><button onClick={newNode}><Plus size={14}/>节点</button><button className={linking?'tool-active':''} onClick={()=>{setLinking(!linking);setLinkPending(false);setExpanded(false);setQuery('');setKind('全部类型');}}><GitBranch size={15}/>{linking?'退出连线':'拖动连线'}</button><button disabled={busy} onClick={()=>mutate({action:'draft',nodes:allNodes.map(n=>({...n,...(positions[n.id]||{})})),relations:allEdges},'布局已保存为草稿')}>保存布局</button>{store.draft&&<><button disabled={busy} onClick={()=>mutate({action:'discard'},'草稿已丢弃')}>丢弃草稿</button><button className="tool-active" onClick={()=>openEditor('publish')}>审核发布</button></>}</>}<span className="optical-path">光源（光线表示探索方向）：{allNodes.find(n=>n.id===root)?.title||'未设置'}{prismMode==='refraction'&&!path?' · 无连通上游路径':''}</span><span className="tool-status">{store.draft?'草稿预览 · 未发布':store.meta.title}</span></div></details></div>{chosenMirror&&<details className="mirror-controls"><summary>关系镜 · {mirrorRelation?.label}</summary><div className="mirror-inspector"><strong>关系：{mirrorRelation?.label}</strong><button className={pickingMirror?'tool-active':''} onClick={()=>setPickingMirror(!pickingMirror)}>{pickingMirror?'点击目标棱镜…':'选择目标棱镜'}</button><span>拖动镜子右侧出射点到目标，自动连接与调角</span><select aria-label="重定向目标" value={chosenMirror.targetId||''} onChange={e=>{if(e.target.value)connectMirror(chosenMirror.id,e.target.value);}}><option value="">或在此选择目标</option>{allNodes.filter(n=>n.id!==incomingNode).map(n=><option value={n.id} key={n.id}>{n.title} · {lenses[n.lens].name}</option>)}</select><button onClick={()=>updateMirror(mirrorId!,{targetId:undefined})}>还原原光路</button>{canEdit&&<button disabled={!(redirectTarget||suggestedTarget)} onClick={()=>{const target=redirectTarget||suggestedTarget;if(!target||!mirrorRelation)return;setEdgeForm({id:mirrorRelation.id,source:incomingNode,target,label:'',reason:''});setLinking(true);beginRelation();setNotice('请确认新关系名称与依据，保存后仅进入草稿');}}>重定向为关系草稿</button>}{canEdit&&<button onClick={()=>{if(!chosenMirror)return;mutate({action:'draft',nodes:allNodes,relations:allEdges.filter(e=>e.id!==chosenMirror.edgeId)},'关系已从草稿移除').then(ok=>{if(ok){setMirrorId(null);setEdgeId(null);}});}}>删除关系草稿</button>}</div></details>}{linking&&<div className="link-instructions">从节点右侧的 + 拖到目标左侧连接点；当前显示全部维度，可直接建立跨图关系。<button onClick={()=>{setDetailOpen(true);setPanel('detail');}}>查看详情</button></div>}{linking&&linkPending&&<form className="inline-relation" onSubmit={e=>{e.preventDefault();saveRelation();}}><span>{allNodes.find(n=>n.id===edgeForm.source)?.title} → {allNodes.find(n=>n.id===edgeForm.target)?.title}</span><input required aria-label="关系名称" placeholder="关系：依赖、采用、检验…" value={edgeForm.label} onChange={e=>setEdgeForm({...edgeForm,label:e.target.value})}/><input required aria-label="关系依据" placeholder="为什么关联？填写依据或标明待核实" value={edgeForm.reason} onChange={e=>setEdgeForm({...edgeForm,reason:e.target.value})}/><button disabled={busy} className="tool-active">保存关系草稿</button><button type="button" onClick={()=>setLinkPending(false)}>取消</button></form>}</div>
  <footer className="site-footer"><span>光谱 / Spectrum Atlas</span><span>领域 × 生态 × 认知 <span className="footer-spectrum"/></span><span>本地原型 · 所有示例待团队核实</span></footer>
  {notice&&<div className="toast" role="status"><Check size={17}/>{notice}</div>}{error&&<div className="error-toast" role="alert">{error}<button onClick={()=>setError('')} aria-label="关闭错误"><X size={15}/></button></div>}
- {library&&<AtlasLibrary current={store.meta} onSelect={selectAtlas} onClose={()=>setLibrary(false)} onChanged={refresh}/>}
+ {library&&<Suspense fallback={<LoadingDialog close={()=>setLibrary(false)}/>}><AtlasLibrary current={store.meta} onSelect={selectAtlas} onClose={()=>setLibrary(false)} onChanged={refresh}/></Suspense>}
  {modal&&<div className="modal-backdrop" onClick={()=>setModal(null)}><section className="modal" role="dialog" aria-modal="true" aria-label="维护操作" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setModal(null)} aria-label="关闭窗口"><X size={20}/></button>
  {modal==='login'&&<form onSubmit={async e=>{e.preventDefault();setBusy(true);try{const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});const b=await r.json();if(!r.ok)throw Error(b.error);setAdmin(true);setPassword('');await refresh();setModal(null);setNotice('已进入维护模式');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}><div className="eyebrow">MAINTAINER ACCESS</div><h2>维护这束知识</h2><p className="muted small">本地开发默认口令见项目 README。维护者可编辑、审核和发布内容。</p><label>维护口令<input autoFocus type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary-button" disabled={busy}>进入维护空间</button></form>}
  {modal==='node'&&<form onSubmit={e=>{e.preventDefault();saveNode();}}><div className="eyebrow">KNOWLEDGE / DRAFT</div><h2>{allNodes.some(n=>n.id===form.id)?'编辑知识节点':'添加知识节点'}</h2><label>标题<input autoFocus required maxLength={120} value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><div className="form-row"><label>所属视角<select value={form.lens} onChange={e=>setForm({...form,lens:e.target.value as Lens})}>{Object.entries(lenses).map(([k,v])=><option key={k} value={k}>{v.name}</option>)}</select></label><label>类型<input required value={form.kind} onChange={e=>setForm({...form,kind:e.target.value})}/></label></div><label>简要解释<input required maxLength={250} value={form.summary} onChange={e=>setForm({...form,summary:e.target.value})}/></label><label>详细内容<textarea value={form.body} onChange={e=>setForm({...form,body:e.target.value})}/></label><label>来源链接（每行一个）<textarea value={form.sources.join('\n')} onChange={e=>setForm({...form,sources:e.target.value.split('\n')})}/></label><label>核实状态<select value={form.status} onChange={e=>setForm({...form,status:e.target.value as KnowledgeNode['status']})}><option>待核实</option><option>已核实</option></select></label><div className="form-actions">{allNodes.some(n=>n.id===form.id)&&<button type="button" className="danger" onClick={()=>mutate({action:'draft',nodes:allNodes.filter(n=>n.id!==form.id),relations:allEdges.filter(e=>e.source!==form.id&&e.target!==form.id)},'节点及其关联已从草稿移除')}>移除节点与关联</button>}<button className="primary-button" disabled={busy}>保存草稿</button></div></form>}
@@ -317,7 +355,7 @@ export default function Atlas(){
  {modal==='publish'&&<form onSubmit={e=>{e.preventDefault();mutate({action:'publish',reason:publishReason},'新版本已发布').then(ok=>ok&&setPublishReason(''));}}><div className="eyebrow">REVIEW / PUBLISH</div><h2>发布一次认识更新</h2><p className="muted small">草稿包含 {allNodes.length} 个节点、{allEdges.length} 条关系。发布后访客将看到新内容，旧内容保留为历史快照。</p><div className="review-summary"><strong>发布前变更检查</strong>{pendingChanges.length?<ul className="change-list">{pendingChanges.map((c,i)=><li key={i}>{c}</li>)}</ul>:<p className="small muted">没有内容差异，仅创建新版本记录。</p>}<p className="small muted">待核实节点：{allNodes.filter(n=>n.status==='待核实').length} · 无来源节点：{allNodes.filter(n=>!n.sources.length).length}</p></div><label>修改了什么？依据与原因是什么？<textarea required autoFocus value={publishReason} onChange={e=>setPublishReason(e.target.value)}/></label><button className="primary-button" disabled={busy}>确认发布本地版本</button></form>}
  </section></div>}
  {conflict&&!reviewOpen&&<div className="error-toast" role="alert"><span>图谱已被其他操作更新，本地编辑仍保留。</span><button onClick={()=>setReviewOpen(true)}>核对最新版本</button></div>}
- {conflict&&reviewOpen&&<ConflictReview local={conflict.local} latest={conflict.latest} busy={busy} onRead={readConflictLatest} onAdopt={adoptConflictLatest} onClose={()=>setReviewOpen(false)}/>}
+ {conflict&&reviewOpen&&<Suspense fallback={<LoadingDialog close={()=>setReviewOpen(false)}/>}><ConflictReview local={conflict.local} latest={conflict.latest} busy={busy} onRead={readConflictLatest} onAdopt={adoptConflictLatest} onClose={()=>setReviewOpen(false)}/></Suspense>}
  {localBackup.length>0&&<details style={{position:'fixed',bottom:8,left:8,zIndex:4000,maxWidth:'80vw',background:'#171722',padding:12}}><summary>保留的本地修改副本（可复制）</summary><textarea aria-label="本地修改副本" readOnly rows={8} value={JSON.stringify(localBackup,null,2)}/><button onClick={()=>setLocalBackup([])}>已保存副本，关闭</button></details>}
  </div>;
 }
