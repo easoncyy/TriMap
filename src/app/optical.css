@@ -227,6 +227,10 @@ body:has(#library[open]) {overflow:hidden;}
  .studio.observatory-workspace .topbar .brand{min-height:44px}
  .studio.observatory-workspace .graph-host .react-flow__attribution a{display:grid;place-content:end;min-width:44px;min-height:44px}
 }
+@media (max-width:767px), (pointer:coarse) and (orientation:landscape) and (max-height:540px) {
+ .studio.observatory-workspace .graph-host .react-flow__node-spectral.selectable:focus-visible{outline:none}
+ .graph-host .react-flow__node-spectral:focus-visible .graph-label strong{text-decoration:underline;text-underline-offset:.18em}
+}
 @media(pointer:coarse){.studio.observatory-workspace .routing-mirror .mirror-fold{width:44px;height:44px;top:-14px}}
 
 /* Separate, already textured layers allow the browser compositor to move the
