@@ -126,7 +126,7 @@ export default function Atlas(){
   const edges=connection&&!folded.edges.some(e=>e.id===connection.id)?[...folded.edges,connection]:folded.edges;
   return {nodes:searching?candidateNodes:[...folded.nodes,...extra],edges:searching?candidateEdges:edges,path:candidate.path};
  },[located,navigationEdge,folded,candidateNodes,candidateEdges,searching,candidate.path]);
- function toggleFold(id:string,open:boolean){setNavigationEdge(null);setLocated(null);setFolds(previous=>({...previous,[foldKey]:{...previous[foldKey],[id]:open}}));}
+ const toggleFold=useCallback((id:string,open:boolean)=>{setNavigationEdge(null);setLocated(null);setFolds(previous=>({...previous,[foldKey]:{...previous[foldKey],[id]:open}}));},[foldKey]);
  const previewTargets=useMemo(()=>mirrors.filter(m=>m.view===mirrorKey&&optical.edges.some(e=>e.id===m.edgeId)).map(m=>allNodes.find(n=>n.id===m.targetId)).filter((n):n is KnowledgeNode=>!!n),[mirrors,mirrorKey,optical.edges,allNodes]);
  const projection=useMemo(()=>[...optical.nodes,...previewTargets.filter(n=>!optical.nodes.some(o=>o.id===n.id))],[optical.nodes,previewTargets]);
  const {visible,matches,anchors,filtering}=useMemo(()=>filterKnowledge(linking?allNodes:projection,linking?allEdges:optical.edges,{query,kind,root,focus,expanded}),[linking,allNodes,projection,allEdges,optical.edges,query,kind,root,focus,expanded]);
@@ -168,63 +168,65 @@ export default function Atlas(){
   return stablePositions[n.id]||{x:n.x,y:n.y};
  }
  const graphPositions=useMemo(()=>Object.fromEntries(visible.map(n=>[n.id,displayedPosition(n)])),[visible,linking,positions,prismMode,refractedPositions,viewKey,stablePositions]);
- const flowKnowledge=visible.map(n=>({id:n.id,type:'spectral',ariaLabel:'知识：'+n.title,position:graphPositions[n.id],selected:n.id===focus&&!mirrorId,data:{...n,contextAnchor:anchors.some(a=>a.id===n.id),lightSource:n.id===root,dimension:lenses[n.lens].name,color:lensColor(n.lens)}}));
+ const flowKnowledge=useMemo(()=>visible.map(n=>({id:n.id,type:'spectral',ariaLabel:'知识：'+n.title,position:graphPositions[n.id],selected:n.id===focus&&!mirrorId,data:{...n,contextAnchor:anchors.some(a=>a.id===n.id),lightSource:n.id===root,dimension:lenses[n.lens].name,color:lensColor(n.lens)}})),[visible,graphPositions,focus,mirrorId,anchors,root]);
  const visibleIds=useMemo(()=>new Set(visible.map(n=>n.id)),[visible]);
  const secondaryCount=optical.edges.filter(e=>!pathTree.treeEdges.has(e.id)).length;
  const routeEdges=useMemo(()=>candidateEdges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge),[candidateEdges,allRelations,pathTree,edgeId,navigationEdge]);
  const opticalEdges=useMemo(()=>(linking?allEdges:optical.edges.filter(e=>allRelations||pathTree.treeEdges.has(e.id)||e.id===edgeId||e.id===navigationEdge)).filter(e=>visibleIds.has(e.source)&&visibleIds.has(e.target)),[linking,allEdges,optical.edges,allRelations,pathTree,edgeId,navigationEdge,visibleIds]);
- const center=(id:string):Point=>{const p=graphPositions[id]||{x:0,y:0};return {x:p.x+100,y:p.y+(id===root?72:80)};};
+ const center=useCallback((id:string):Point=>{const p=graphPositions[id]||{x:0,y:0};return {x:p.x+100,y:p.y+(id===root?72:80)};},[graphPositions,root]);
  const depths=useMemo(()=>searching?lightDepths(candidateNodes,candidateEdges,explorationRoot):folded.depth,[searching,candidateNodes,candidateEdges,explorationRoot,folded]);
- function lightEndpoints(e:Relation){
+ const lightEndpoints=useCallback((e:Relation)=>{
   return (depths.get(e.source)??999)<=(depths.get(e.target)??999)
    ?{source:e.source,target:e.target}:{source:e.target,target:e.source};
- }
+ },[depths]);
  const routePositions=linking?graphPositions:stablePositions;
- const routed=useMemo(()=>routeMirrors(routePositions,linking?allEdges:routeEdges),[routePositions,linking,allEdges,routeEdges]);
  const savedMirrors=useMemo(()=>new Map(mirrors.filter(m=>m.view===mirrorKey).map(m=>[m.edgeId,m])),[mirrors,mirrorKey]);
- const activeMirrors=opticalEdges.map(e=>{
+ const needsRouting=opticalEdges.some(e=>!savedMirrors.has(e.id));
+ const routed=useMemo(()=>needsRouting?routeMirrors(routePositions,linking?allEdges:routeEdges):{},[needsRouting,routePositions,linking,allEdges,routeEdges]);
+ const activeMirrors=useMemo(()=>opticalEdges.map(e=>{
   const saved=savedMirrors.get(e.id);
   if(saved)return {...saved,targetId:allNodes.some(n=>n.id===saved.targetId)?saved.targetId:undefined};
   return {id:'mirror:'+e.id,edgeId:e.id,view:mirrorKey,position:routed[e.id],angle:0} as Mirror;
- });
- const mirrorsByEdge=new Map(activeMirrors.map(m=>[m.edgeId,m]));
- const outgoing=new Map<string,string[]>();
- for(const edge of opticalEdges){
-  const {source}=lightEndpoints(edge);
-  const siblings=outgoing.get(source)||[];
-  siblings.push(edge.id);
-  outgoing.set(source,siblings);
- }
- const branches=new Map<string,{index:number;count:number}>();
- for(const siblings of outgoing.values()){
-  siblings.sort((a,b)=>a.localeCompare(b));
-  siblings.forEach((id,index)=>branches.set(id,{index,count:siblings.length}));
- }
+ }),[opticalEdges,savedMirrors,allNodes,mirrorKey,routed]);
  function updateMirror(id:string,changes:Partial<Mirror>){const m=activeMirrors.find(m=>m.id===id);if(m)setMirrors(ms=>[...ms.filter(x=>!(x.edgeId===m.edgeId&&x.view===m.view)),{...m,...changes,manual:true}]);}
- const litKnowledge=flowKnowledge;
- const flowEdges=opticalEdges.flatMap(e=>{
-  const endpoints=lightEndpoints(e),m=mirrorsByEdge.get(e.id);
-  const {index,count}=branches.get(e.id)!;
-  const color=endpoints.source===root?'#efeee4':`hsl(${Math.round(index*300/Math.max(1,count-1))} 72% 68%)`;
-  const base={type:'spectral',className:e.id===navigationEdge?'navigation-ray':undefined,selectable:false,focusable:false,data:{relationId:e.id,active:e.id===hoveredEdge||e.id===edgeId||e.id===navigationEdge,color}};
-  return m?[{...base,id:e.id+':in',source:endpoints.source,target:m.id,label:undefined},{...base,id:e.id+':out',source:m.id,target:m.targetId||endpoints.target,label:undefined,data:{...base.data,spectral:e.id===edgeId}}]:[{...base,id:e.id,...endpoints,label:undefined}];
- });
+ const flowEdges=useMemo(()=>{
+  const mirrorsByEdge=new Map(activeMirrors.map(m=>[m.edgeId,m]));
+  const outgoing=new Map<string,string[]>();
+  for(const edge of opticalEdges){
+   const {source}=lightEndpoints(edge);
+   const siblings=outgoing.get(source)||[];
+   siblings.push(edge.id);
+   outgoing.set(source,siblings);
+  }
+  const branches=new Map<string,{index:number;count:number}>();
+  for(const siblings of outgoing.values()){
+   siblings.sort((a,b)=>a.localeCompare(b));
+   siblings.forEach((id,index)=>branches.set(id,{index,count:siblings.length}));
+  }
+  return opticalEdges.flatMap(e=>{
+   const endpoints=lightEndpoints(e),m=mirrorsByEdge.get(e.id);
+   const {index,count}=branches.get(e.id)!;
+   const color=endpoints.source===root?'#efeee4':`hsl(${Math.round(index*300/Math.max(1,count-1))} 72% 68%)`;
+   const base={type:'spectral',className:e.id===navigationEdge?'navigation-ray':undefined,selectable:false,focusable:false,data:{relationId:e.id,active:e.id===hoveredEdge||e.id===edgeId||e.id===navigationEdge,color}};
+   return m?[{...base,id:e.id+':in',source:endpoints.source,target:m.id,label:undefined},{...base,id:e.id+':out',source:m.id,target:m.targetId||endpoints.target,label:undefined,data:{...base.data,spectral:e.id===edgeId}}]:[{...base,id:e.id,...endpoints,label:undefined}];
+  });
+ },[activeMirrors,opticalEdges,lightEndpoints,root,navigationEdge,hoveredEdge,edgeId]);
  const chosenMirror=activeMirrors.find(m=>m.id===mirrorId),mirrorRelation=allEdges.find(e=>e.id===chosenMirror?.edgeId);
  const incomingNode=mirrorRelation?lightEndpoints(mirrorRelation).source:'';
  const suggestedTarget=chosenMirror?.targetId||null;
  function connectMirror(id:string,target:string){const m=activeMirrors.find(m=>m.id===id),e=allEdges.find(e=>e.id===m?.edgeId);if(!m||!e)return;const incoming=lightEndpoints(e).source;if(target===incoming||!allNodes.some(n=>n.id===target)){setError('请选择入射节点以外的知识棱镜');return;}setExpanded(false);setQuery('');setKind('全部类型');updateMirror(id,{targetId:target});setMirrorId(id);setRedirectTarget(target);setPickingMirror(false);setNotice('光线已连接到目标；如需修改知识关系，请保存为关系草稿');}
- const mirrorNodes=activeMirrors.map(m=>{const e=allEdges.find(e=>e.id===m.edgeId)!,ends=lightEndpoints(e);return {id:m.id,type:'mirror',className:e.id===navigationEdge?'navigation-mirror':undefined,ariaLabel:'关系：'+e.label,zIndex:3000,position:m.position,selected:m.id===mirrorId,data:{title:e.label,preview:!!m.targetId&&m.targetId!==ends.target,folded:false,onToggle:()=>toggleFold(e.id,false),angle:mirrorAngle(center(ends.source),{x:m.position.x+38,y:m.position.y+38},center(m.targetId||ends.target))}};});
+ const mirrorNodes=useMemo(()=>activeMirrors.map(m=>{const e=allEdges.find(e=>e.id===m.edgeId)!,ends=lightEndpoints(e);return {id:m.id,type:'mirror',className:e.id===navigationEdge?'navigation-mirror':undefined,ariaLabel:'关系：'+e.label,zIndex:3000,position:m.position,selected:m.id===mirrorId,data:{title:e.label,preview:!!m.targetId&&m.targetId!==ends.target,folded:false,onToggle:()=>toggleFold(e.id,false),angle:mirrorAngle(center(ends.source),{x:m.position.x+38,y:m.position.y+38},center(m.targetId||ends.target))}};}),[activeMirrors,allEdges,lightEndpoints,navigationEdge,mirrorId,toggleFold,center]);
  const frontier=useMemo(()=>linking||searching?[]:folded.frontier.filter(f=>visibleIds.has(f.source)&&f.edge.id!==navigationEdge),[linking,searching,folded,visibleIds,navigationEdge]);
  const frontierPositions=useMemo(()=>frontier.every(f=>savedMirrors.has(f.edge.id))?{}:routeFrontiers(graphPositions,frontier,explorationRoot,Object.fromEntries(opticalEdges.map(e=>[e.id,savedMirrors.get(e.id)?.position||routed[e.id]]))),[graphPositions,frontier,explorationRoot,savedMirrors,routed,opticalEdges]);
- const frontierNodes=frontier.map(f=>{const saved=savedMirrors.get(f.edge.id);const position=saved?.position||frontierPositions[f.edge.id];return {id:'frontier:'+f.edge.id,type:'mirror',ariaLabel:'关系：'+f.edge.label,position,zIndex:3000,selected:mirrorId==='frontier:'+f.edge.id,data:{title:f.edge.label,relationId:f.edge.id,folded:true,targetTitle:allNodes.find(n=>n.id===f.target)?.title,onToggle:()=>toggleFold(f.edge.id,true),angle:35}};});
+ const frontierNodes=useMemo(()=>frontier.map(f=>{const saved=savedMirrors.get(f.edge.id);const position=saved?.position||frontierPositions[f.edge.id];return {id:'frontier:'+f.edge.id,type:'mirror',ariaLabel:'关系：'+f.edge.label,position,zIndex:3000,selected:mirrorId==='frontier:'+f.edge.id,data:{title:f.edge.label,relationId:f.edge.id,folded:true,targetTitle:allNodes.find(n=>n.id===f.target)?.title,onToggle:()=>toggleFold(f.edge.id,true),angle:35}};}),[frontier,savedMirrors,frontierPositions,mirrorId,allNodes,toggleFold]);
  // Persist automatic mirror positions too: folding changes visibility, never the layout.
  useEffect(()=>{
   if(!ready||!store||linking)return;
   const additions=[...activeMirrors,...frontierNodes.map(n=>({id:'mirror:'+String(n.data.relationId),edgeId:String(n.data.relationId),view:mirrorKey,position:n.position,angle:0,manual:false}))].filter(m=>!mirrors.some(old=>old.view===m.view&&old.edgeId===m.edgeId));
   if(additions.length)setMirrors(previous=>[...previous,...additions.filter(m=>!previous.some(old=>old.view===m.view&&old.edgeId===m.edgeId))]);
  },[ready,store,linking,activeMirrors,frontierNodes,mirrorKey,mirrors]);
- const frontierEdges=frontier.map(f=>({id:'frontier-ray:'+f.edge.id,type:'spectral',selectable:false,focusable:false,source:f.source,target:'frontier:'+f.edge.id,data:{relationId:f.edge.id}}));
- const flowNodes=[...litKnowledge,...mirrorNodes,...frontierNodes];
+ const graphEdges=useMemo(()=>[...flowEdges,...frontier.map(f=>({id:'frontier-ray:'+f.edge.id,type:'spectral',selectable:false,focusable:false,source:f.source,target:'frontier:'+f.edge.id,data:{relationId:f.edge.id}}))],[flowEdges,frontier]);
+ const flowNodes=useMemo(()=>[...flowKnowledge,...mirrorNodes,...frontierNodes],[flowKnowledge,mirrorNodes,frontierNodes]);
  function autoLayout(){setReveal(null);
   const nodes=linking?allNodes:candidateNodes,edges=linking?allEdges:candidateEdges;
   const l=balancedLayout(nodes,edges,explorationRoot);
@@ -339,7 +341,7 @@ export default function Atlas(){
   if(node){event.preventDefault();event.stopPropagation();selectGraphObject(node);}
  }}><div className="canvas-toolbar"><div><button ref={modeToggle} className="mode-toggle" aria-label={immersive?'返回工作区':'进入沉浸探索'} aria-pressed={immersive} onClick={toggleImmersive}>{immersive?<Minimize2 size={16}/>:<Maximize2 size={16}/>}<span className="mode-label">{immersive?'返回工作区':'沉浸探索'}</span><span className="mode-label-compact" aria-hidden="true">{immersive?'返回':'沉浸'}</span></button><button ref={explorerToggle} className="explorer-toggle" aria-expanded={explorerOpen} aria-controls="exploration-panel" onClick={()=>{enableExplorerMotion(true);setExplorerOpen(!explorerOpen);if(!explorerOpen)requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('#exploration-panel input')?.focus());}}><Search size={16}/>探索</button><span className="live-dot"/> {lenses[lens].en} <span className="muted">/ {visible.length} 个节点 · {opticalEdges.length} 条关系</span></div><div><button aria-label={detailOpen?'收起阅读面板':'打开阅读面板'} aria-expanded={detailOpen} aria-controls="knowledge-reading" onClick={()=>setDetailOpen(!detailOpen)}><SlidersHorizontal size={16}/><span className="reading-toggle-label">阅读</span></button><button className={!list?'active-toggle':''} onClick={()=>setList(false)}>图谱</button><button className={list?'active-toggle':''} onClick={()=>setList(true)}>列表</button>{canEdit&&<button className="add-button" onClick={newNode}><Plus size={14}/>节点</button>}</div></div>
  {canEdit&&<div className="draft-bar"><span>{store.draft?'正在预览未发布草稿':store.meta.owned?'个人编辑 · 当前为已发布内容':'维护模式 · 当前为已发布内容'}</span><button onClick={()=>{setEdgeForm({id:crypto.randomUUID(),source:selected?.id||allNodes[0]?.id||'',target:allNodes.find(n=>n.id!==(selected?.id||allNodes[0]?.id))?.id||'',label:'关联',reason:''});setLinking(true);beginRelation();}}>建立关系</button><button onClick={()=>mutate({action:'draft',nodes:allNodes.map(n=>({...n,...(positions[n.id]||{})})),relations:allEdges},'布局已保存为草稿')}>保存当前布局</button>{store.draft&&<><button onClick={()=>mutate({action:'discard'},'草稿已丢弃')}>丢弃草稿</button><button className="publish" onClick={()=>openEditor('publish')}>审核发布</button></>}</div>}
- {filtering&&<div className="filter-status" role="status">{matches.length===0?'没有匹配的知识':`找到 ${matches.length} 个匹配知识`}{anchors.length>0&&<span>另保留 {anchors.length} 个探索锚点，未计入结果</span>}<button onClick={()=>{setQuery('');setKind('全部类型');}}>清除筛选</button></div>}<div className="canvas-content">{lensSweep>0&&<span key={lensSweep} className="gel-sweep" style={{'--gel':lensColor(lens)} as React.CSSProperties} aria-hidden="true"/>}{visible.length===0?<div className="empty-state"><Search size={28}/><h3>没有匹配的知识</h3><p>换一个关键词，或清除筛选后继续探索。</p><button onClick={()=>{setQuery('');setKind('全部类型');setExpanded(false);}}>清除筛选</button></div>:list?<div className="node-list">{(filtering?matches:visible).map(n=><button key={n.id} onClick={()=>revealKnowledge(n.id)}><span className="node-kind">{n.kind} · {n.status}</span><h3>{n.title}<ArrowUpRight size={17}/></h3><p>{n.summary}</p></button>)}</div>:<GraphCanvas orbitAngle={orbitAngles[mirrorKey]??0} onOrbitCommit={angle=>setOrbitAngles(prev=>({...prev,[mirrorKey]:angle}))} fitScope={JSON.stringify([atlasId,lens,prismMode,explorationRoot,kind,query,expanded,linking])} onViewChange={snapshot=>{camera.current=snapshot;}} key={`${lens}-${expanded}-${linking}-${prismMode}-${layoutEpoch}`} reveal={reveal} onRevealHandled={epoch=>setReveal(previous=>previous?.epoch===epoch?null:previous)} nodes={flowNodes} edges={[...flowEdges,...frontierEdges]} nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.02} maxZoom={1.8} onNodeMouseEnter={(_,n)=>{if(n.type==='mirror')highlightMirror(String(n.data.relationId||activeMirrors.find(m=>m.id===n.id)?.edgeId||''));}} onNodeMouseLeave={()=>highlightMirror(null)} onNodeClick={(_,n)=>selectGraphObject(n)} onNodeDragStart={(_,n)=>{setNavigationEdge(null);setPickingMirror(false);setRedirectTarget('');if(n.type==='mirror'){setMirrorId(n.id);setEdgeId(activeMirrors.find(m=>m.id===n.id)?.edgeId||(n.id.startsWith('frontier:')?n.id.slice(9):null));}else{setMirrorId(null);setEdgeId(null);setFocus(n.id);}}} onNodeDragStop={(_,n)=>{if(n.type==='mirror'){if(n.id.startsWith('frontier:')){const id=n.id.slice(9);setMirrors(ms=>[...ms.filter(m=>!(m.edgeId===id&&m.view===mirrorKey)),{id:'mirror:'+id,edgeId:id,view:mirrorKey,position:n.position,angle:0,manual:true}]);}else updateMirror(n.id,{position:n.position});return;}setManualPositions(ids=>[...new Set([...ids,prismMode==='refraction'&&!linking?viewKey+':'+n.id:n.id])]);if(prismMode==='refraction'&&!linking){setRefractedPositions(p=>({...p,[viewKey+':'+n.id]:n.position}));return;}setPositions(p=>({...p,[n.id]:{x:n.position.x-(linking?['domain','ecology','cognition'].indexOf(allNodes.find(item=>item.id===n.id)?.lens||lens)*1150:0),y:n.position.y}}));}}  nodesConnectable={(canEdit&&linking)||!!mirrorId} connectionRadius={35} onPaneClick={()=>{setDetailOpen(false);setPickingMirror(false);}} onConnect={connection=>{if(connection.source?.startsWith('mirror:')&&connection.target){connectMirror(connection.source,connection.target);return;}if(!canEdit)return;if(!connection.source||!connection.target||connection.source===connection.target)return;const existing=allEdges.find(e=>e.source===connection.source&&e.target===connection.target);setEdgeForm(existing?{...existing}:{id:crypto.randomUUID(),source:connection.source,target:connection.target,label:'关联',reason:''});beginRelation();}} deleteKeyCode={null} colorMode="dark"/>}
+ {filtering&&<div className="filter-status" role="status">{matches.length===0?'没有匹配的知识':`找到 ${matches.length} 个匹配知识`}{anchors.length>0&&<span>另保留 {anchors.length} 个探索锚点，未计入结果</span>}<button onClick={()=>{setQuery('');setKind('全部类型');}}>清除筛选</button></div>}<div className="canvas-content">{lensSweep>0&&<span key={lensSweep} className="gel-sweep" style={{'--gel':lensColor(lens)} as React.CSSProperties} aria-hidden="true"/>}{visible.length===0?<div className="empty-state"><Search size={28}/><h3>没有匹配的知识</h3><p>换一个关键词，或清除筛选后继续探索。</p><button onClick={()=>{setQuery('');setKind('全部类型');setExpanded(false);}}>清除筛选</button></div>:<>{list&&<div className="node-list">{(filtering?matches:visible).map(n=><button key={n.id} onClick={()=>revealKnowledge(n.id)}><span className="node-kind">{n.kind} · {n.status}</span><h3>{n.title}<ArrowUpRight size={17}/></h3><p>{n.summary}</p></button>)}</div>}<GraphCanvas active={!list} orbitAngle={orbitAngles[mirrorKey]??0} onOrbitCommit={angle=>setOrbitAngles(prev=>({...prev,[mirrorKey]:angle}))} fitScope={JSON.stringify([atlasId,lens,prismMode,explorationRoot,kind,query,expanded,linking])} onViewChange={snapshot=>{camera.current=snapshot;}} key={`${lens}-${expanded}-${linking}-${prismMode}-${layoutEpoch}`} reveal={reveal} onRevealHandled={epoch=>setReveal(previous=>previous?.epoch===epoch?null:previous)} nodes={flowNodes} edges={graphEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.02} maxZoom={1.8} onNodeMouseEnter={(_,n)=>{if(n.type==='mirror')highlightMirror(String(n.data.relationId||activeMirrors.find(m=>m.id===n.id)?.edgeId||''));}} onNodeMouseLeave={()=>highlightMirror(null)} onNodeClick={(_,n)=>selectGraphObject(n)} onNodeDragStart={(_,n)=>{setNavigationEdge(null);setPickingMirror(false);setRedirectTarget('');if(n.type==='mirror'){setMirrorId(n.id);setEdgeId(activeMirrors.find(m=>m.id===n.id)?.edgeId||(n.id.startsWith('frontier:')?n.id.slice(9):null));}else{setMirrorId(null);setEdgeId(null);setFocus(n.id);}}} onNodeDragStop={(_,n)=>{if(n.type==='mirror'){if(n.id.startsWith('frontier:')){const id=n.id.slice(9);setMirrors(ms=>[...ms.filter(m=>!(m.edgeId===id&&m.view===mirrorKey)),{id:'mirror:'+id,edgeId:id,view:mirrorKey,position:n.position,angle:0,manual:true}]);}else updateMirror(n.id,{position:n.position});return;}setManualPositions(ids=>[...new Set([...ids,prismMode==='refraction'&&!linking?viewKey+':'+n.id:n.id])]);if(prismMode==='refraction'&&!linking){setRefractedPositions(p=>({...p,[viewKey+':'+n.id]:n.position}));return;}setPositions(p=>({...p,[n.id]:{x:n.position.x-(linking?['domain','ecology','cognition'].indexOf(allNodes.find(item=>item.id===n.id)?.lens||lens)*1150:0),y:n.position.y}}));}}  nodesConnectable={(canEdit&&linking)||!!mirrorId} connectionRadius={35} onPaneClick={()=>{setDetailOpen(false);setPickingMirror(false);}} onConnect={connection=>{if(connection.source?.startsWith('mirror:')&&connection.target){connectMirror(connection.source,connection.target);return;}if(!canEdit)return;if(!connection.source||!connection.target||connection.source===connection.target)return;const existing=allEdges.find(e=>e.source===connection.source&&e.target===connection.target);setEdgeForm(existing?{...existing}:{id:crypto.randomUUID(),source:connection.source,target:connection.target,label:'关联',reason:''});beginRelation();}} deleteKeyCode={null} colorMode="dark"/></>}
  <div className="canvas-caption"><span>△</span>拖动探索空间 · 点击节点色散 · 沿关联折射<button onClick={()=>setPositions({})}>重置布局</button></div></div>
  <footer className="canvas-footer"><span><i style={{background:lensColor(lens)}}/>当前滤光片：{lenses[lens].name}</span><span>节点颜色随观察视角变化</span></footer></section>
  {/* The modal explorer temporarily owns focus; retain the requested reading state for its return. */}

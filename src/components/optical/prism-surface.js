@@ -1,13 +1,16 @@
 const glassFragmentSource = `precision highp float;
-uniform mat3 orientation;
+varying mat3 orientation;
 uniform vec2 viewport;
 uniform sampler2D stars;
-uniform vec2 beam;
-uniform float energy;
+varying vec4 optical;
+#define beam optical.xy
+#define energy optical.z
 uniform float reveal;
-uniform float phase;
-uniform vec3 tint;
-uniform float attention;
+uniform float time;
+#define phase (time+optical.w)
+varying vec4 pigment;
+#define tint pigment.rgb
+#define attention pigment.a
 varying vec2 uv;
 
 uniform vec4 planes[4];
@@ -202,13 +205,26 @@ export function createPrismSurface(canvas, invalidate) {
     poses.set(id, pose);
     return pose;
   }
+  const vertexFloats=23;
+  const corners=[[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]];
+  let verticesBuffer=new Float32Array(0),batchDirty=true;
   function setup() {
+    batchDirty=true;
     if (!gl) return false;
     const shaders = [];
     for (const [type, text] of [
       [
         gl.VERTEX_SHADER,
-        'attribute vec2 pos;varying vec2 uv;void main(){uv=pos;gl_Position=vec4(pos,0.,1.);}',
+        `attribute vec2 pos;
+         attribute vec4 rect, lighting, color;
+         attribute vec3 axisX, axisY, axisZ;
+         varying vec2 uv;
+         varying mat3 orientation;
+         varying vec4 optical, pigment;
+         void main(){
+           uv=pos; orientation=mat3(axisX,axisY,axisZ); optical=lighting; pigment=color;
+           gl_Position=vec4(rect.xy+pos*rect.zw,0.,1.);
+         }`,
       ],
       [gl.FRAGMENT_SHADER, glassFragmentSource],
     ]) {
@@ -226,16 +242,15 @@ export function createPrismSurface(canvas, invalidate) {
     const buf = gl.createBuffer();
     buffer = buf;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-      gl.STATIC_DRAW,
-    );
-    const xy = gl.getAttribLocation(p, 'pos');
-    gl.enableVertexAttribArray(xy);
-    gl.vertexAttribPointer(xy, 2, gl.FLOAT, false, 0, 0);
+    let offset=0;
+    for(const [name,size] of [['pos',2],['rect',4],['axisX',3],['axisY',3],['axisZ',3],['lighting',4],['color',4]]){
+      const index=gl.getAttribLocation(p,name);
+      gl.enableVertexAttribArray(index);
+      gl.vertexAttribPointer(index,size,gl.FLOAT,false,vertexFloats*4,offset*4);
+      offset+=size;
+    }
     locations = Object.fromEntries(
-      ['orientation', 'beam', 'energy', 'reveal', 'viewport', 'stars','phase','tint','attention'].map(
+      ['reveal','viewport','stars','time'].map(
         (k) => [k, gl.getUniformLocation(p, k)],
       ),
     );
@@ -293,20 +308,31 @@ export function createPrismSurface(canvas, invalidate) {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform1f(locations.reveal,1);
 
-    for (const stone of stones) {
-      const {id,x,y,span,light,energy}=stone;
-      gl.viewport(Math.round(x*ratio),Math.round((height-y-span)*ratio),Math.round(span*ratio),Math.round(span*ratio));
-      const pose=orientation(id);
-      gl.uniformMatrix3fv(locations.orientation,false,pose.matrix);
-      const length=Math.hypot(light.x,light.y)||1;
-      gl.uniform2f(locations.beam,light.x/length,light.y/length);
-      const attention=id===hovered?1:stone.focused?.42:0;
-      gl.uniform1f(locations.phase,phase+pose.matrix[2]*18.);
-      gl.uniform3fv(locations.tint,pigments[stone.lens]||pigments.domain);
-      gl.uniform1f(locations.attention,attention);
-      gl.uniform1f(locations.energy,energy);
-      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    gl.viewport(0,0,w,h);
+    gl.uniform1f(locations.time,phase);
+    if(batchDirty){
+      // Expand the quads into one ordered triangle batch. The animated shader
+      // only needs a new time uniform until geometry or illumination changes.
+      const count=stones.length*6*vertexFloats;
+      if(verticesBuffer.length<count)verticesBuffer=new Float32Array(count);
+      let at=0;
+      for(const stone of stones){
+        const {id,x,y,span,light,energy}=stone;
+        const size=Math.round(span*ratio);
+        const rect=[(2*Math.round(x*ratio)+size)/w-1,(2*Math.round((height-y-span)*ratio)+size)/h-1,size/w,size/h];
+        const matrix=orientation(id).matrix;
+        const length=Math.hypot(light.x,light.y)||1;
+        const lighting=[light.x/length,light.y/length,energy,matrix[2]*18];
+        const color=[...(pigments[stone.lens]||pigments.domain),id===hovered?1:stone.focused?.42:0];
+        for(const corner of corners){
+          verticesBuffer.set(corner,at);verticesBuffer.set(rect,at+2);verticesBuffer.set(matrix,at+6);
+          verticesBuffer.set(lighting,at+15);verticesBuffer.set(color,at+19);at+=vertexFloats;
+        }
+      }
+      gl.bufferData(gl.ARRAY_BUFFER,verticesBuffer.subarray(0,count),gl.DYNAMIC_DRAW);
+      batchDirty=false;
     }
+    if(stones.length)gl.drawArrays(gl.TRIANGLES,0,stones.length*6);
     if(!host.classList.contains('has-smoke'))host.classList.add('has-smoke');
   }
   function tick(now){
@@ -319,28 +345,29 @@ export function createPrismSurface(canvas, invalidate) {
     frame=requestAnimationFrame(tick);
   }
   function syncMotion(){
-    const enabled=program&&scene?.stones.length&&!document.hidden&&!reduced.matches&&host.dataset.skyPaused!=='true'
-      &&!host.matches('.camera-travel,.dragging-object')&&!document.querySelector('dialog[open]');
+    const enabled=!host.inert&&program&&scene?.stones.length&&!document.hidden&&!reduced.matches&&host.dataset.skyPaused!=='true'
+      &&host.dataset.turning!=='true'&&!host.matches('.camera-travel,.dragging-object')&&!document.querySelector('dialog[open]');
     if(enabled&&!frame)frame=requestAnimationFrame(tick);
     if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;lastFrame=0;}
   }
   const stateObserver=new MutationObserver(syncMotion);
-  stateObserver.observe(host,{attributes:true,attributeFilter:['data-sky-paused','class']});
+  stateObserver.observe(host,{attributes:true,attributeFilter:['data-sky-paused','data-turning','inert','class']});
   stateObserver.observe(document.body,{attributes:true,subtree:true,attributeFilter:['open']});
   reduced.addEventListener('change',syncMotion);
   document.addEventListener('visibilitychange',syncMotion);
   function draw(width,height,stones){
     if(!program||!width||!height)return;
     const ratio=Math.min(window.devicePixelRatio||1,stones.length>14?1:1.5);
-    const signature=JSON.stringify([width,height,ratio,stones]);
-    if(signature===previousPaint)return;
-    previousPaint=signature;
+    const moving=host.dataset.turning==='true';
+    const signature=moving?'':JSON.stringify([width,height,ratio,stones]);
+    if(!moving&&signature===previousPaint)return;
+    previousPaint=signature;batchDirty=true;
     scene={width,height,ratio,stones:stones.filter(({x,y,span})=>x+span>=0&&y+span>=0&&x<=width&&y<=height)};
     paint();syncMotion();
   }
   function illuminate(id){
     if(hovered===id)return;
-    hovered=id;
+    hovered=id;batchDirty=true;
     if(!host.matches('.camera-travel,.dragging-object'))paint();
   }
   function dispose() {

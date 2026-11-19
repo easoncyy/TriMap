@@ -1,9 +1,9 @@
-import {useEffect,useRef} from 'react';
+import {memo,useEffect,useRef} from 'react';
 import {useStoreApi,type Node} from '@xyflow/react';
 
 /** The orbits use graph coordinates, but their backing surface is viewport-sized.
  * A zoomed SVG gradient on the full orbital plane creates very large paint tiles in WebKit. */
-export function PlanetaryOrbits({nodes}:{nodes:Node[]}){
+export const PlanetaryOrbits=memo(function PlanetaryOrbits({nodes}:{nodes:Node[]}){
  const canvasRef=useRef<HTMLCanvasElement>(null);
  const store=useStoreApi();
  const prisms=nodes.filter(node=>node.type==='spectral');
@@ -62,4 +62,4 @@ export function PlanetaryOrbits({nodes}:{nodes:Node[]}){
   return ()=>{observer.disconnect();cancelAnimationFrame(resizeFrame);unsubscribe();};
  },[store,x,y,radius,hasSun]);
  return <canvas ref={canvasRef} className="planetary-plane" aria-hidden="true"/>;
-}
+});

@@ -290,3 +290,7 @@
   .studio.observatory-workspace .reading-summary p {-webkit-line-clamp:1}
   .studio.observatory-workspace .reading-summary .reading-navigation {margin:6px 0}
 }
+
+/* Keep the measured graph and its camera ready when returning from the list. */
+.canvas-content > .graph-host[inert] {position:absolute;inset:0;opacity:0;visibility:hidden;pointer-events:none}
+.canvas-content > .graph-host[inert] * {animation-play-state:paused!important}
