@@ -1,0 +1,65 @@
+[
+  {
+    "engine": "WebKit",
+    "entry": "Next",
+    "width": 1440,
+    "ecologyLabels": 3,
+    "fontFiles": 38,
+    "fontBytes": 4465856,
+    "errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ],
+    "badRequests": [],
+    "reducedMotionInfiniteAnimations": 0
+  },
+  {
+    "engine": "WebKit",
+    "entry": "Next",
+    "width": 1024,
+    "ecologyLabels": 3,
+    "fontFiles": 28,
+    "fontBytes": 3879312,
+    "errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ],
+    "badRequests": [],
+    "reducedMotionInfiniteAnimations": 0
+  },
+  {
+    "engine": "WebKit",
+    "entry": "Next",
+    "width": 390,
+    "ecologyLabels": 3,
+    "fontFiles": 27,
+    "fontBytes": 3841640,
+    "errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ],
+    "badRequests": [],
+    "reducedMotionInfiniteAnimations": 0
+  },
+  {
+    "engine": "WebKit",
+    "entry": "Next",
+    "width": 320,
+    "ecologyLabels": 3,
+    "fontFiles": 27,
+    "fontBytes": 3841640,
+    "errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ],
+    "badRequests": [],
+    "reducedMotionInfiniteAnimations": 0
+  },
+  {
+    "engine": "Chromium",
+    "entry": "Pages static + local API",
+    "width": 1440,
+    "ecologyLabels": 3,
+    "fontFiles": 38,
+    "fontBytes": 4465856,
+    "errors": [],
+    "badRequests": [],
+    "reducedMotionInfiniteAnimations": 0
+  }
+]

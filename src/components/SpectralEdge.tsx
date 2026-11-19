@@ -9,7 +9,7 @@ function opticalCenter(node:NonNullable<ReturnType<typeof useInternalNode>>){con
 function boundary(node:NonNullable<ReturnType<typeof useInternalNode>>,other:NonNullable<ReturnType<typeof useInternalNode>>){
  if(node.type==='spectral'||node.type==='mirror'){
   const c=opticalCenter(node),o=opticalCenter(other),dx=o.x-c.x,dy=o.y-c.y,len=Math.hypot(dx,dy)||1;
-  if(node.type==='mirror'||node.data.lightSource){const radius=node.type==='mirror'?30:25;return {x:c.x+dx/len*radius,y:c.y+dy/len*radius};}
+  if(node.type==='mirror'||node.data.lightSource){const radius=node.type==='mirror'?0:25;return {x:c.x+dx/len*radius,y:c.y+dy/len*radius};}
   // The glass rotates with the light, so approximate it with a circle rather than fixed vertices.
   const p=node.internals.positionAbsolute,glass={x:p.x+100,y:p.y+72},tx=o.x-glass.x,ty=o.y-glass.y,tlen=Math.hypot(tx,ty)||1;
   return {x:glass.x+tx/tlen*48,y:glass.y+ty/tlen*48};

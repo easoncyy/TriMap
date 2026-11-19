@@ -1,7 +1,7 @@
 import type {KnowledgeNode,Relation} from './model';
 import type {Point} from './optics';
 import {crosses,overlaps,type Box} from './label-placement.ts';
-export const LAYOUT_VERSION=3;
+export const LAYOUT_VERSION=4;
 export function primaryTree(nodes:KnowledgeNode[],edges:Relation[],root:string){
  const ids=new Set(nodes.map(n=>n.id)),children=new Map(nodes.map(n=>[n.id,[] as string[]])),parent=new Map<string,string>(),treeEdges=new Set<string>(),depth=new Map<string,number>();
  if(!ids.has(root))return {children,parent,treeEdges,depth};
@@ -33,18 +33,53 @@ export function routeMirrors(positions:Record<string,Point>,edges:Relation[]){
  }
  return result;
 }
-/** Tidy bilateral tree: each branch owns a contiguous vertical band. */
+/** Give each branch a sector of a tilted celestial disk. Angles depend only on the full tree,
+ * so opening a fold or changing the camera cannot shuffle the constellation. */
 export function layoutPrisms(nodes:KnowledgeNode[],tree:ReturnType<typeof primaryTree>,root:string){
- const positions:Record<string,Point>={},weight=new Map<string,number>();
- const measure=(id:string):number=>{const value=Math.max(1,tree.children.get(id)!.reduce((sum,child)=>sum+measure(child),0));weight.set(id,value);return value;};
- if(tree.depth.has(root)){measure(root);positions[root]={x:0,y:0};
-  const groups:[string[],string[]]=[[],[]],loads=[0,0];
-  for(const child of [...tree.children.get(root)!].sort((a,b)=>weight.get(b)!-weight.get(a)!||a.localeCompare(b))){const side=loads[0]<=loads[1]?0:1;groups[side].push(child);loads[side]+=weight.get(child)!;}
-  const place=(id:string,sign:number,start:number)=>{const height=weight.get(id)!*520;positions[id]={x:sign*tree.depth.get(id)!*1100,y:start+height/2};let cursor=start;for(const child of tree.children.get(id)!){place(child,sign,cursor);cursor+=weight.get(child)!*520;}};
-  groups.forEach((items,side)=>{let cursor=-loads[side]*520/2;for(const id of items){place(id,side===0?-1:1,cursor);cursor+=weight.get(id)!*520;}});
+ const positions:Record<string,Point>={};
+ const weights=new Map<string,number>();
+ const measure=(id:string):number=>{
+  const count=Math.max(1,(tree.children.get(id)||[]).reduce((sum,child)=>sum+measure(child),0));
+  weights.set(id,count);
+  return count;
+ };
+ function variation(id:string){
+  let hash=2166136261;
+  for(const char of id)hash=Math.imul(hash^char.charCodeAt(0),16777619);
+  return (hash>>>0)/4294967296-.5;
  }
- const bottom=Math.max(0,...Object.values(positions).map(p=>p.y))+850;
- nodes.filter(n=>!positions[n.id]).sort((a,b)=>a.id.localeCompare(b.id)).forEach((n,i)=>{positions[n.id]={x:(i%3-1)*1100,y:bottom+Math.floor(i/3)*520};});
+ const occupied:Point[]=[];
+ function place(id:string,angle:number,radius:number){
+  let point:Point;
+  do {
+   const x=radius*1.42*Math.cos(angle),y=radius*.84*Math.sin(angle);
+   point={x:Math.round(x*.983+y*.184),y:Math.round(y*.983-x*.184)};
+   radius+=95;
+  } while(occupied.some(other=>Math.abs(point.x-other.x)<435&&Math.abs(point.y-other.y)<265));
+  positions[id]=point;
+  occupied.push(point);
+ }
+ function branch(id:string,start:number,arc:number,level:number){
+  const children=tree.children.get(id)||[];
+  const sizes=children.map(child=>Math.sqrt(weights.get(child)!));
+  const total=sizes.reduce((a,b)=>a+b,0);
+  for(const [i,child] of children.entries()){
+   const width=arc*sizes[i]/total;
+   const angle=start+width*(.5+.15*variation(child));
+   place(child,angle,(490+level*445)*(1+.19*variation(child)));
+   branch(child,start+width*.035,width*.93,level+1);
+   start+=width;
+  }
+ }
+ if(tree.depth.has(root)){
+  measure(root);
+  place(root,0,0);
+  branch(root,-2.8,Math.PI*2,0);
+ }
+ const rim=Math.max(0,...occupied.map(p=>Math.hypot(p.x/1.42,p.y/.84)))+500;
+ nodes.filter(n=>!positions[n.id]).sort((a,b)=>a.id.localeCompare(b.id)).forEach((node,i)=>{
+  place(node.id,i*2.39996+.7,rim+130*Math.sqrt(i));
+ });
  return positions;
 }
 export function balancedLayout(nodes:KnowledgeNode[],edges:Relation[],root:string){
@@ -66,6 +101,7 @@ export function routeFrontiers(positions:Record<string,Point>,frontier:{edge:Rel
 
 /** Extend a layout without moving any previously placed knowledge, including hidden nodes. */
 export function extendPositions(desired:Record<string,Point>,saved:Record<string,Point>){
+ if(!Object.keys(saved).length)return {...desired};
  const result={...saved};
  for(const [id,wanted] of Object.entries(desired)){
   if(result[id])continue;

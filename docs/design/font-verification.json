@@ -1,0 +1,30 @@
+{
+  "fixtureNodes": 61,
+  "fixtureRelations": 94,
+  "labelCharacters": 334,
+  "families": {
+    "Tongfang": {
+      "characters": 29511,
+      "missingLabelCharacters": "",
+      "files": 1,
+      "bytes": 1427644
+    },
+    "IBM Plex Sans SC": {
+      "characters": 29285,
+      "missingLabelCharacters": "",
+      "files": 216,
+      "bytes": 5654132
+    },
+    "glitch-sans": {
+      "characters": 30892,
+      "coverageUnchanged": true,
+      "maxFileBytes": 3106372
+    },
+    "glitch-serif": {
+      "characters": 30847,
+      "coverageUnchanged": true,
+      "maxFileBytes": 4423000
+    }
+  },
+  "MiSansUnmodifiedFiles": 112
+}

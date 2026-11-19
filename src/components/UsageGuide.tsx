@@ -15,5 +15,6 @@ export default function UsageGuide({onClose}:{onClose:()=>void}){
  <div className="usage-guide-card"><header><span>INSTRUCTION · 使用指引</span><button autoFocus aria-label="关闭使用指引" onClick={()=>dialog.current?.close()}>×</button></header>
  <p className="usage-progress">{step+1} / {steps.length}</p><h2 id="usage-guide-title">{item.title}</h2><p>{item.body}</p><aside>{item.hint}</aside>
  <nav aria-label="教程步骤">{steps.map((s,i)=><button key={s.title} aria-label={`第 ${i+1} 步：${s.title}`} aria-current={i===step?'step':undefined} onClick={()=>setStep(i)}>{i+1}</button>)}</nav>
+ {step===steps.length-1&&<small className="type-credit">本软件使用 MiSans 字体。</small>}
  <footer><button disabled={step===0} onClick={()=>setStep(i=>i-1)}>上一步</button><button onClick={()=>step===steps.length-1?dialog.current?.close():setStep(i=>i+1)}>{step===steps.length-1?'开始探索':'下一步'}</button></footer></div></dialog>;
 }
