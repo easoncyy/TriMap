@@ -8,7 +8,7 @@ export function KnowledgePrism({data,selected}:NodeProps){
  const color=String(data.color),root=!!data.lightSource;
  return <div className={`knowledge-node optical-node ${selected?'selected':''} ${root?'light-source':''}`} data-lens={String(data.lens)} style={{'--node-color':color,'--orbit-delay':-(String(data.id).split('').reduce((sum,c)=>sum+c.charCodeAt(0),0)%113)/10+'s'} as React.CSSProperties}>
  <Handle type="target" position={Position.Left}/>
- <div className="prism-shape" aria-hidden="true"><svg viewBox="0 0 120 120" width="100%" height="100%">
+ <div className="prism-shape" style={{transform:`scale(${Number(data.orbitScale??1)})`}} aria-hidden="true"><svg viewBox="0 0 120 120" width="100%" height="100%">
   <defs><linearGradient id={glass} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#cbd6d5"/><stop offset=".45" stopColor="#42545d"/><stop offset=".54" stopColor="#91a2a5"/><stop offset="1" stopColor="#26343c"/></linearGradient></defs>
   <g className="crystal-fallback" stroke="none">
     <path d="M57 9L17 83 62 103Z" fill={`url(#${glass})`}/>
@@ -29,7 +29,7 @@ export function RoutingMirror({data,selected}:NodeProps){
  const star=useId().replace(/:/g,'');
  return <div className={`routing-mirror ${selected?'selected':''} ${data.folded?'is-folded':''}`}>
   <Handle type="target" position={Position.Left} isConnectable={false}/>
-  <svg viewBox="0 0 76 76" className="mirror-shape" aria-hidden="true">
+  <svg viewBox="0 0 76 76" className="mirror-shape" style={{transform:`scale(${Number(data.orbitScale??1)})`}} aria-hidden="true">
    <defs><radialGradient id={star}>
     <stop stopColor="white" stopOpacity=".19"/><stop offset=".48" stopColor="white" stopOpacity=".05"/>
     <stop offset="1" stopColor="white" stopOpacity="0"/>

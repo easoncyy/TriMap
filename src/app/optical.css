@@ -320,3 +320,8 @@ body:has(#library[open]) {overflow:hidden;}
 
 /* A crowded hover preview cannot intercept the pointer and re-trigger layout. */
 .graph-host:not(.camera-travel) .react-flow__node:is(:hover,:focus-visible) .graph-label[data-placed="false"]{visibility:visible!important;pointer-events:none}
+
+.graph-host .orbit-control{position:absolute;top:8px;right:8px;z-index:6;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;color:var(--atlas-ink);background:var(--atlas-chrome);border:1px solid var(--atlas-line);border-radius:4px;font-size:13px}
+.graph-host .orbit-control input{width:76px;min-height:42px;margin:0;accent-color:var(--lens)}
+.graph-host .orbit-control output{min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
+.graph-host[data-turning=true] .label-leaders{visibility:hidden}

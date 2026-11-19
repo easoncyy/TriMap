@@ -1,14 +1,18 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {PlanetaryOrbits} from './optical/PlanetaryOrbits';
 import {mountNightSky} from './optical/night-sky';
 import {createPrismSurface} from './optical/prism-surface';
 import {Plus,Minus,Pause,Play} from 'lucide-react';
 import {locateCamera,restoreCamera,type CameraSnapshot,type RevealRequest} from '@/lib/exploration-navigation';
 import {placeLabelWithin,type Box,type Segment} from '@/lib/label-placement';
-import {ReactFlow,Controls,ControlButton,useNodesState,type Viewport,type ReactFlowProps,type ReactFlowInstance,type NodeChange} from '@xyflow/react';
+import {ReactFlow,Controls,ControlButton,useNodesState,type Viewport,type ReactFlowProps,type ReactFlowInstance,type Node,type NodeChange} from '@xyflow/react';
 
-type Props=ReactFlowProps&{fitScope:string;reveal?:RevealRequest|null;onRevealHandled?:(epoch:number)=>void;onViewChange?:(snapshot:CameraSnapshot)=>void};
+import {wrapOrbit,fullTurn,projectOrbit,opticalOffset} from '@/lib/orbit';
+import {mirrorAngle,type Point} from '@/lib/optics';
+import {bindOrbitInput} from './orbit-input';
+
+type Props=ReactFlowProps&{orbitAngle?:number;onOrbitCommit?:(angle:number)=>void;fitScope:string;reveal?:RevealRequest|null;onRevealHandled?:(epoch:number)=>void;onViewChange?:(snapshot:CameraSnapshot)=>void};
 // Keep the cloud legible in fitted, sparse maps without obscuring close-up nodes.
 // Only its visual scale is normalized; pointer position remains synchronous.
 const cursorCloudScale=(zoom:number)=>Math.max(.28,Math.min(.72,.7*Math.sqrt(Math.max(0,zoom))));
@@ -16,7 +20,7 @@ const cursorCloudScale=(zoom:number)=>Math.max(.28,Math.min(.72,.7*Math.sqrt(Mat
 const labelScreenScale=(zoom:number)=>Math.max(.8,Math.min(1,Math.pow(Math.max(.001,zoom)/.4,.12)));
 const labelTransformScale=(zoom:number)=>labelScreenScale(zoom)/zoom;
 /** React Flow owns geometry. Labels/leaders are disposable screen-space presentation. */
-export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealHandled,onViewChange,...props}:Props){
+export default function GraphCanvas({nodes:incoming=[],orbitAngle,onOrbitCommit,fitScope,reveal,onRevealHandled,onViewChange,...props}:Props){
  const [nodes,setNodes,onNodesChange]=useNodesState(incoming);
  const container=useRef<HTMLDivElement>(null),leaders=useRef<SVGSVGElement>(null);
  const [instance,setInstance]=useState<ReactFlowInstance|null>(null);
@@ -31,6 +35,65 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
  const pendingReveal=useRef(reveal);pendingReveal.current=reveal;
  const viewCallback=useRef(onViewChange);viewCallback.current=onViewChange;
  function publishView(){const host=container.current;if(host&&instance)viewCallback.current?.({viewport:instance.getViewport(),width:host.clientWidth,height:host.clientHeight});}
+ const canceledDrag=useRef<string|null>(null),originalPosition=useRef<Point|null>(null);
+ const orbitEnabled=orbitAngle!==undefined;
+ const [angle,setAngle]=useState(orbitAngle??0);
+ const angleRef=useRef(orbitAngle??0),orbitFrame=useRef(0),turning=useRef(false);
+ const commit=useRef(onOrbitCommit);
+ useLayoutEffect(()=>{commit.current=onOrbitCommit;},[onOrbitCommit]);
+ useLayoutEffect(()=>{angleRef.current=orbitAngle??0;setAngle(orbitAngle??0);},[orbitAngle]);
+ const source=incoming.find(n=>n.data.lightSource);
+ const prismCenter=opticalOffset('spectral');
+ const pivotX=(source?.position.x??0)+prismCenter.x,pivotY=(source?.position.y??0)+prismCenter.y;
+ const pivot=useMemo(()=>({x:pivotX,y:pivotY}),[pivotX,pivotY]);
+ const projected=useMemo(()=>{
+  if(!orbitEnabled||angle===0)return nodes;
+  const centers=new Map<string,Point>();
+  const result=nodes.map(n=>{
+   const offset=opticalOffset(n.type);
+   const center={x:n.position.x+offset.x,y:n.position.y+offset.y};
+   const p=n.data.lightSource?{...center,scale:1,depth:0}:projectOrbit(center,pivot,angle);
+   centers.set(n.id,p);
+   return {...n,position:{x:p.x-offset.x,y:p.y-offset.y},zIndex:Math.round(500+450*Math.tanh(p.depth/1000)),data:{...n.data,orbitScale:p.scale}};
+  });
+  const sources=new Map<string,string>(),targets=new Map<string,string>();
+  for(const edge of props.edges??[]){sources.set(edge.target,edge.source);targets.set(edge.source,edge.target);}
+  return result.map(n=>{
+   if(n.type!=='mirror')return n;
+   const a=centers.get(sources.get(n.id)??''),b=centers.get(targets.get(n.id)??'');
+   return a&&b?{...n,data:{...n.data,angle:mirrorAngle(a,centers.get(n.id)!,b)}}:n;
+  });
+ },[nodes,pivot,angle,props.edges,orbitEnabled]);
+ function layoutPoint(id:string,type:string|undefined,position:Point){
+  if(!orbitEnabled||id===source?.id)return position;
+  const offset=opticalOffset(type);
+  const p=projectOrbit({x:position.x+offset.x,y:position.y+offset.y},pivot,-angleRef.current);
+  return {x:p.x-offset.x,y:p.y-offset.y};
+ }
+ function turn(delta:number){
+  if(!delta)return;
+  turning.current=true;autoFit.current=false;
+  if(container.current)container.current.dataset.turning='true';
+  angleRef.current=wrapOrbit(angleRef.current+delta);
+  if(!orbitFrame.current)orbitFrame.current=requestAnimationFrame(()=>{orbitFrame.current=0;setAngle(angleRef.current);});
+ }
+ function finishTurn(){
+  turning.current=false;
+  if(container.current)delete container.current.dataset.turning;
+  cancelAnimationFrame(orbitFrame.current);orbitFrame.current=0;
+  setAngle(angleRef.current);commit.current?.(angleRef.current);latestDraw.current();
+ }
+ useEffect(()=>{
+  if(!orbitEnabled||!container.current||!instance)return;
+  const interruptDrag=()=>{
+   const id=dragging.current,position=originalPosition.current;
+   if(!id||!position)return;
+   canceledDrag.current=id;dragging.current=null;
+   setNodes(ns=>ns.map(n=>n.id===id?{...n,position,dragging:false}:n));
+  };
+  const unbind=bindOrbitInput(container.current,instance,props.minZoom??.02,props.maxZoom??1.8,turn,finishTurn,()=>{autoFit.current=false;},interruptDrag);
+  return ()=>{unbind();cancelAnimationFrame(orbitFrame.current);};
+ },[instance,props.minZoom,props.maxZoom,orbitEnabled]);
  const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const latestDraw=useRef(()=>{});
  // Hover changes the glass illumination only. Reprioritizing collision placement
@@ -100,7 +163,7 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
    canvasSize.current={width:outer.width,height:outer.height};
    const rect=(el:Element):Box=>{const r=el.getBoundingClientRect();return {x:r.x-outer.x,y:r.y-outer.y,width:r.width,height:r.height};};
    const bounds={x:12,y:12,width:Math.max(0,outer.width-24),height:Math.max(0,outer.height-64)};
-   const controlBoxes=Array.from(host.querySelectorAll('.react-flow__controls,.overview-note')).map(rect);
+   const controlBoxes=Array.from(host.querySelectorAll('.orbit-control,.react-flow__controls,.overview-note')).map(rect);
    const lines:Segment[]=[];
    host.querySelectorAll<SVGPathElement>('.react-flow__edge-path').forEach(path=>{
     const d=path.getAttribute('d')||'';
@@ -140,6 +203,7 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
     const lens=item.el.parentElement?.dataset.lens;
     return {id:item.owner,x,y,span,light,lens,focused:item.rank===2,energy:beam?.active?1:item.rank===2?.48:.12};
    }));
+   if(turning.current)return;
    const obstacles=measured.map(item=>item.shape).concat(controlBoxes);
    const peerShapes=[measured.filter(item=>!item.mirror),measured.filter(item=>item.mirror)];
    const labelObstacles:Box[]=[];
@@ -212,7 +276,7 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
   // The former .25 minimum cropped the graph before fitView could fit it.
   void instance.fitView({padding:.2,minZoom:.02,maxZoom:1,duration:0}).then(arrangeLabels);
  }
- useEffect(()=>{arrangeLabels();return()=>cancelAnimationFrame(labelFrame.current);},[nodes,props.edges,instance]);
+ useEffect(()=>{arrangeLabels();return()=>cancelAnimationFrame(labelFrame.current);},[projected,props.edges,instance]);
  useEffect(()=>{
   let alive=true;
   const refresh=()=>{if(alive)latestDraw.current();};
@@ -228,7 +292,8 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
  function changeNodes(changes:NodeChange[]){
   const selection=changes.find(c=>c.type==='select'&&c.selected);
   if(selection?.type==='select')setNodes(ns=>ns.map(n=>({...n,selected:n.id===selection.id})));
-  onNodesChange(changes.filter(c=>c.type!=='position'||!dragging.current||c.id===dragging.current));
+  const allowed=changes.filter(c=>c.type!=='position'||(c.id!==canceledDrag.current&&(!dragging.current||c.id===dragging.current)));
+  onNodesChange(allowed.map(c=>c.type==='position'&&c.position?{...c,position:layoutPoint(c.id,nodes.find(n=>n.id===c.id)?.type,c.position)}:c));
  }
  useEffect(()=>{
   if(!instance||!container.current)return;
@@ -252,7 +317,7 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
    const previousById=new Map(previous.map(node=>[node.id,node]));
    return incoming.map(node=>{
     const existing=previousById.get(node.id);
-    return existing?{...existing,...node,measured:existing.measured}:node;
+    return existing?{...existing,...node,position:dragging.current===node.id?existing.position:node.position,measured:existing.measured}:node;
    });
   });
  },[incoming,setNodes]);
@@ -280,12 +345,15 @@ export default function GraphCanvas({nodes:incoming=[],fitScope,reveal,onRevealH
   });});
   return()=>cancelAnimationFrame(frame);
  },[instance,reveal,nodes]);
- return <div className="graph-host" data-dense={incoming.filter(n=>n.type==='spectral').length>14} data-sky-paused={skyPaused} ref={container} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;followHover(id);}} onMouseLeave={()=>followHover(null)} onBlur={()=>followHover(null)} onFocus={event=>{followHover((event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null);}}>
+ return <div className="graph-host" data-orbit-degrees={Math.round(angle*360/fullTurn)} data-dense={incoming.filter(n=>n.type==='spectral').length>14} data-sky-paused={skyPaused} ref={container} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;followHover(id);}} onMouseLeave={()=>followHover(null)} onBlur={()=>followHover(null)} onFocus={event=>{followHover((event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null);}}>
   <div className="sky-depth" aria-hidden="true"><i className="gas gas-far"/></div>
   <div className="cursor-bloom" aria-hidden="true"><span className="cursor-dust" ref={cloudSize}><i className="nebula-wake"/><i className="cloud-swirl"/></span></div>
-  <ReactFlow {...props} fitView={false} onMoveEnd={(event,viewport)=>{settleCamera();publishView();props.onMoveEnd?.(event,viewport);}} onMoveStart={(event,viewport)=>{if(cameraSettle.current)clearTimeout(cameraSettle.current);inCameraMotion.current=true;if(event)autoFit.current=false;props.onMoveStart?.(event,viewport);}} onMove={(event,viewport)=>{inCameraMotion.current=true;followCamera(viewport);props.onMove?.(event,viewport);}} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{dragging.current=node.id;container.current?.classList.add('dragging-object');autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{props.onNodeDragStop?.(event,node,items);dragging.current=null;arrangeLabels();}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={nodes} onNodesChange={changeNodes}>
+  <ReactFlow {...props} fitView={false} onMoveEnd={(event,viewport)=>{settleCamera();publishView();props.onMoveEnd?.(event,viewport);}} onMoveStart={(event,viewport)=>{if(cameraSettle.current)clearTimeout(cameraSettle.current);inCameraMotion.current=true;if(event)autoFit.current=false;props.onMoveStart?.(event,viewport);}} onMove={(event,viewport)=>{inCameraMotion.current=true;followCamera(viewport);props.onMove?.(event,viewport);}} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{canceledDrag.current=null;originalPosition.current=nodes.find(n=>n.id===node.id)?.position??null;dragging.current=node.id;container.current?.classList.add('dragging-object');autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{if(node.id===canceledDrag.current)return;const original=(n:Node)=>({...n,position:layoutPoint(n.id,n.type,n.position)});props.onNodeDragStop?.(event,original(node),items.map(original));dragging.current=null;arrangeLabels();}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={projected} onNodesChange={changeNodes}>
    {props.children}<PlanetaryOrbits nodes={nodes}/><Controls showZoom={false} showInteractive={false} onFitView={fitAll}><ControlButton aria-label="Zoom In" onClick={()=>{autoFit.current=false;void instance?.zoomIn({duration:reduced()?0:180});}}><Plus/></ControlButton><ControlButton aria-label="Zoom Out" onClick={()=>{autoFit.current=false;void instance?.zoomOut({duration:reduced()?0:180});}}><Minus/></ControlButton><ControlButton className="sky-control" aria-label="暂停星云与环绕星光" aria-pressed={skyPaused} title="暂停或继续星云与环绕星光" onClick={()=>{const value=!skyPaused;setSkyPaused(value);try{localStorage.setItem('trimap-optical-sky',value?'paused':'running');}catch{}}}>{skyPaused?<Play/>:<Pause/>}</ControlButton></Controls>
   </ReactFlow>
+  {orbitEnabled&&<label className="orbit-control" title="触控板双指横滑或拧转；触屏双指旋转">
+   <span>星环</span><input type="range" aria-label="星环旋转角度" min={0} max={360} step={1} value={Math.round(angle*360/fullTurn)} onChange={event=>{const next=Number(event.target.value)*fullTurn/360;angleRef.current=next;setAngle(next);autoFit.current=false;commit.current?.(next);}}/><output>{Math.round(angle*360/fullTurn)}°</output>
+  </label>}
   <svg ref={leaders} className="label-leaders" aria-hidden="true"/>
   {hiddenLabels>0&&<div className="overview-note">概览已收起 {hiddenLabels} 个拥挤标签；选中物体、放大或切换列表查看。</div>}
  </div>;
