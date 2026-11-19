@@ -42,9 +42,15 @@ export function placeLabelWithin(box:Box,obstacles:Box[],lines:Segment[],bounds:
   if(displacement>maxDistance||displacement>=bestScore)return;
   if(ownership){
    const cx=p.x+p.width/2,cy=p.y+p.height/2;
-   const distance=(o:Box)=>Math.hypot(Math.max(o.x-cx,0,cx-o.x-o.width),Math.max(o.y-cy,0,cy-o.y-o.height));
-   const own=distance(ownership.owner);
-   if(own>12&&ownership.peers.some(peer=>distance(peer)+12<own))return;
+   const squaredDistance=(o:Box)=>{
+    const dx=Math.max(o.x-cx,0,cx-o.x-o.width),dy=Math.max(o.y-cy,0,cy-o.y-o.height);
+    return dx*dx+dy*dy;
+   };
+   const own=squaredDistance(ownership.owner);
+   if(own>144){
+    const threshold=(Math.sqrt(own)-12)**2;
+    if(ownership.peers.some(peer=>squaredDistance(peer)<threshold))return;
+   }
   }
   const padded={x:p.x-4,y:p.y-4,width:p.width+8,height:p.height+8};
   if(nearbyObstacles.some(o=>overlaps(padded,o)))return;

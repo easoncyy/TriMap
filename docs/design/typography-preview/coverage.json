@@ -1,0 +1,163 @@
+{
+  "scope": {
+    "knowledgeNodes": 61,
+    "relations": 94,
+    "recordHan": 853,
+    "interfaceAndRecordHan": 902,
+    "GB2312Han": 6763
+  },
+  "families": {
+    "zhuque": {
+      "files": 44,
+      "bytes": 4960192,
+      "cmap": 12882,
+      "han": 11292,
+      "internalWeightClasses": [
+        400
+      ],
+      "recordHanMissing": 0,
+      "allHanMissing": "",
+      "GB2312HanSupported": 6763,
+      "basicHanSupported": 11009,
+      "rareProbe": {
+        "臺": true,
+        "灣": true,
+        "龘": true,
+        "鱻": false,
+        "㐀": false,
+        "𠮷": false,
+        "𰻞": false
+      },
+      "source": {
+        "url": "https://github.com/TrionesType/zhuque/releases/download/v0.212/ZhuqueFangsong-v0.212.zip",
+        "license": "https://raw.githubusercontent.com/TrionesType/zhuque/v0.212/LICENSE.txt",
+        "sha256": "558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4",
+        "version": "Version 0.212",
+        "axes": {}
+      },
+      "originalCmapMissing": 0
+    },
+    "mi-400": {
+      "files": 56,
+      "bytes": 1919956,
+      "cmap": 11093,
+      "han": 9901,
+      "internalWeightClasses": [
+        330
+      ],
+      "recordHanMissing": 0,
+      "allHanMissing": "",
+      "GB2312HanSupported": 6696,
+      "basicHanSupported": 9901,
+      "rareProbe": {
+        "臺": true,
+        "灣": false,
+        "龘": false,
+        "鱻": true,
+        "㐀": false,
+        "𠮷": false,
+        "𰻞": false
+      }
+    },
+    "mi-500": {
+      "files": 56,
+      "bytes": 1928712,
+      "cmap": 11093,
+      "han": 9901,
+      "internalWeightClasses": [
+        380
+      ],
+      "recordHanMissing": 0,
+      "allHanMissing": "",
+      "GB2312HanSupported": 6696,
+      "basicHanSupported": 9901,
+      "rareProbe": {
+        "臺": true,
+        "灣": false,
+        "龘": false,
+        "鱻": true,
+        "㐀": false,
+        "𠮷": false,
+        "𰻞": false
+      }
+    },
+    "serif": {
+      "files": 46,
+      "bytes": 9782880,
+      "cmap": 30930,
+      "han": 27801,
+      "internalWeightClasses": [
+        400
+      ],
+      "recordHanMissing": 0,
+      "allHanMissing": "",
+      "GB2312HanSupported": 6763,
+      "basicHanSupported": 20992,
+      "rareProbe": {
+        "臺": true,
+        "灣": true,
+        "龘": true,
+        "鱻": true,
+        "㐀": true,
+        "𠮷": false,
+        "𰻞": false
+      },
+      "source": {
+        "url": "https://raw.githubusercontent.com/adobe-fonts/source-han-serif/7889f11bf31170b5d092a083b357c8c8130f89e0/SubsetOTF/CN/SourceHanSerifCN-Regular.otf",
+        "license": "https://raw.githubusercontent.com/adobe-fonts/source-han-serif/7889f11bf31170b5d092a083b357c8c8130f89e0/LICENSE.txt",
+        "sha256": "3754ea669c530e2473354f8f6d9f79680a44d7e26ec7d00eeabee4a7e0753c5d",
+        "version": "Version 2.003;hotconv 1.1.1;makeotfexe 2.6.0",
+        "axes": {}
+      },
+      "originalCmapMissing": 0
+    },
+    "cormorantgaramond": {
+      "files": 3,
+      "bytes": 244728,
+      "cmap": 974,
+      "han": 0,
+      "internalWeightClasses": [
+        300,
+        500
+      ],
+      "source": {
+        "url": "https://raw.githubusercontent.com/google/fonts/5bd87dfc525c8a0d1d8529d3684716e00c3fc59a/ofl/cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf",
+        "license": "https://raw.githubusercontent.com/google/fonts/5bd87dfc525c8a0d1d8529d3684716e00c3fc59a/ofl/cormorantgaramond/OFL.txt",
+        "sha256": "b20b7d9626dd956b2c5e558692ad328b1f19e3275e2782db4fa07670d83f35e0",
+        "version": "Version 4.001",
+        "axes": {
+          "wght": [
+            300.0,
+            700.0
+          ]
+        },
+        "italicSource": "https://raw.githubusercontent.com/google/fonts/5bd87dfc525c8a0d1d8529d3684716e00c3fc59a/ofl/cormorantgaramond/CormorantGaramond-Italic%5Bwght%5D.ttf",
+        "italicSha256": "0f48ea6abb2084537854f7174c470991a463b13036309e3b50a81511611c530d"
+      },
+      "originalCmapMissing": 0
+    },
+    "spacegrotesk": {
+      "files": 2,
+      "bytes": 70800,
+      "cmap": 735,
+      "han": 0,
+      "internalWeightClasses": [
+        300
+      ],
+      "source": {
+        "url": "https://raw.githubusercontent.com/google/fonts/5bd87dfc525c8a0d1d8529d3684716e00c3fc59a/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf",
+        "license": "https://raw.githubusercontent.com/google/fonts/5bd87dfc525c8a0d1d8529d3684716e00c3fc59a/ofl/spacegrotesk/OFL.txt",
+        "sha256": "acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72",
+        "version": "Version 2.000",
+        "axes": {
+          "wght": [
+            300.0,
+            700.0
+          ]
+        }
+      },
+      "originalCmapMissing": 0
+    }
+  },
+  "totalWoff2Bytes": 18907268
+}

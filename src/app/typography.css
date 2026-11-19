@@ -1,0 +1,89 @@
+@font-face{font-family:"Spectrum Graph Labels";src:url("/optical/type/spectrum-graph-labels.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+/* Role tokens apply to the observatory, its dialogs, and their native controls. */
+:root{
+ --type-cjk-ui:"MiSans","Observatory Han Fallback","PingFang SC","Microsoft YaHei",sans-serif;
+ --type-latin-ui:"Observatory UI Latin",var(--type-cjk-ui);
+ --type-latin-display:"Observatory Display Latin",Georgia,serif;
+ --type-display:"Observatory Display","FangSong","Songti SC",serif;
+ --type-editorial:"Observatory Editorial","Songti SC","Noto Serif CJK SC",serif;
+ --type-ui:var(--type-latin-ui);
+ --type-body:var(--type-ui);
+ --type-graph:"IBM Plex Sans SC",var(--type-ui);
+ --type-explorer:"Spectrum Graph Labels",var(--type-ui);
+ --type-glitch-ui:"Spectrum Glitch Sans",var(--type-ui);
+ --type-glitch-display:"Spectrum Glitch Serif",var(--type-display);
+ --type-heading:var(--type-ui);
+ --type-brand:var(--type-display);
+ --type-brand-size:clamp(23px,1.9vw,30px);
+ --type-display-size:clamp(26px,2.45vw,38px);
+ --type-heading-size:clamp(18px,1.4vw,22px);
+ --type-body-size:15px;--type-ui-size:14px;--type-meta-size:12px;
+ --type-graph-size:15px;--type-graph-focus:17px;
+ --type-reading-size:clamp(16px,1.12vw,18px);
+ --type-lead-size:clamp(20px,1.55vw,25px);
+ --type-latin-caption:12px;
+ --type-weight-text:400;--type-weight-label:500;--type-weight-heading:500;
+ --type-brand-leading:1.14;--type-display-leading:1.24;--type-heading-leading:1.35;
+ --type-ui-leading:1.45;--type-body-leading:1.6;--type-reading-leading:1.85;--type-caption-leading:1.3;
+ --type-brand-tracking:.055em;--type-title-tracking:.018em;--type-ui-tracking:0em;
+ --type-reading-tracking:.012em;--type-caption-tracking:.09em;
+}
+.studio.observatory-workspace{
+ --sans:var(--type-ui);--serif:var(--type-editorial);--title-face:var(--type-display);
+ font:var(--type-weight-text) var(--type-body-size)/var(--type-body-leading) var(--type-body);
+ font-synthesis:none;letter-spacing:var(--type-ui-tracking);
+}
+.studio.observatory-workspace :is(button,input,textarea,select,label,summary,option){font-family:var(--type-ui);font-weight:var(--type-weight-text)}
+.studio.observatory-workspace :is(.topbar,.side-panel,.spectrum-tools,.canvas-toolbar,.lens-question,.overview-note){font-family:var(--type-ui)}
+.studio.observatory-workspace :is(.header-actions,.spectrum-tools,.canvas-toolbar) button{font-size:var(--type-ui-size);line-height:var(--type-ui-leading)}
+.studio.observatory-workspace :is(h1,h2,h3,h4,.node-list h3,.explorer-heading h2,.modal h2,.usage-guide-card h2){font:var(--type-weight-heading) var(--type-heading-size)/var(--type-heading-leading) var(--type-heading);letter-spacing:var(--type-ui-tracking)}
+.studio.observatory-workspace .brand{font:400 var(--type-brand-size)/var(--type-brand-leading) var(--type-brand);letter-spacing:var(--type-brand-tracking)}
+.studio.observatory-workspace .brand small,.studio.observatory-workspace .lens-tab small{font:500 var(--type-latin-caption)/var(--type-caption-leading) var(--type-latin-display);letter-spacing:var(--type-caption-tracking)}
+.studio.observatory-workspace .atlas-banner h1{font:400 var(--type-display-size)/var(--type-display-leading) var(--type-display);letter-spacing:var(--type-title-tracking)}
+.studio.observatory-workspace .atlas-signature{font:italic 500 clamp(16px,1.65vw,25px)/1.2 var(--type-latin-display);letter-spacing:0}
+.studio.observatory-workspace .lens-tab strong{font:var(--type-weight-heading) var(--type-heading-size)/var(--type-heading-leading) var(--type-heading)}
+.studio.observatory-workspace :is(.lens-number,.node-kind,.record-meta,.tool-status,.mode-status,.usage-progress){font-family:var(--type-latin-ui);font-variant-numeric:tabular-nums}
+.studio.observatory-workspace .graph-host .graph-label strong{font:var(--type-weight-text) var(--type-graph-size)/var(--type-heading-leading) var(--type-graph)}
+.studio.observatory-workspace .graph-host .selected .graph-label strong{font-size:var(--type-graph-focus);font-weight:500}
+.studio.observatory-workspace .graph-host .graph-label :is(.node-kind,.mirror-relation-name,small){font-family:var(--type-graph);font-weight:400;font-size:var(--type-meta-size)!important;line-height:var(--type-ui-leading)}
+.studio.observatory-workspace :is(.detail-panel h2,.reading-summary h2),#library #dialog-title{font:400 var(--type-display-size)/var(--type-display-leading) var(--type-editorial);letter-spacing:var(--type-title-tracking)}
+.studio.observatory-workspace :is(.detail-summary,.reading-summary p,.node-list p,.relation-card p,.detail-scroll .body-copy),#library .body-copy,#library .record-lead{font:400 var(--type-reading-size)/var(--type-reading-leading) var(--type-editorial);letter-spacing:var(--type-reading-tracking)}
+.studio.observatory-workspace .detail-panel .detail-summary,#library .record-lead{font-size:var(--type-lead-size);line-height:1.6}
+#library :is(.record-meta,.source-link,.record-links,.locate-record){font-family:var(--type-ui)}
+@media(max-width:1050px){:root{--type-heading-size:18px;--type-display-size:27px;--type-ui-size:13px}}
+@media(max-width:767px){:root{--type-brand-size:22px;--type-display-size:22px;--type-heading-size:16px;--type-body-size:14px;--type-graph-size:14px;--type-graph-focus:16px;--type-latin-caption:11px;--type-reading-leading:1.8}}
+@media(max-width:359px){:root{--type-brand-size:21px;--type-display-size:20px;--type-heading-size:15px;--type-ui-size:12px;--type-title-tracking:0em}}
+
+#library .record-meta,.type-credit,#library #count{font:400 var(--type-meta-size)/var(--type-ui-leading) var(--type-ui)}
+#library :is(.library-row,.rel-row,.endpoint-row,.dialog-head button){font:400 var(--type-ui-size)/var(--type-ui-leading) var(--type-ui)}
+.studio.observatory-workspace .mirror-fold::after{font:400 var(--type-ui-size)/var(--type-ui-leading) var(--type-ui)}
+#library #dialog-title{text-wrap:balance}
+@media(max-width:460px){
+ .studio.observatory-workspace .brand{flex:none;gap:5px;white-space:nowrap}
+ .studio.observatory-workspace .topbar{padding-inline:8px}
+ .studio.observatory-workspace .header-actions .role-button{padding-inline:4px;font-size:var(--type-ui-size);white-space:nowrap}
+ #library .reader-heading{min-width:0}
+ #library .dialog-head{flex-wrap:wrap;gap:2px 12px}
+ #library .reader-heading{flex:1 0 100%}
+ #library .dialog-head button{min-height:36px}
+}
+
+/* Approved role overrides: exploration controls, masthead, and graph labels. */
+.studio.observatory-workspace :is(.canvas-toolbar,.spectrum-tools,#exploration-panel,.lens-bar),
+.studio.observatory-workspace :is(.canvas-toolbar,.spectrum-tools,#exploration-panel,.lens-bar) :is(button,input,select,option,label,summary,h2,strong,small,.lens-number,.lens-question,.tool-status){
+ font-family:var(--type-explorer);font-weight:400;
+}
+.studio.observatory-workspace #exploration-panel input::placeholder{font-family:var(--type-explorer);font-weight:400}
+.studio.observatory-workspace .atlas-banner,
+.studio.observatory-workspace .atlas-banner small{font-family:var(--type-glitch-ui);font-weight:900}
+.studio.observatory-workspace .header-actions,
+.studio.observatory-workspace .header-actions button,
+.studio.observatory-workspace .atlas-banner button{font-family:var(--type-explorer);font-weight:400}
+.studio.observatory-workspace .brand,
+.studio.observatory-workspace .atlas-banner h1{font-family:var(--type-glitch-display);font-weight:900}
+.studio.observatory-workspace .brand small{font-family:var(--type-latin-display);font-weight:500}
+.studio.observatory-workspace .atlas-banner .atlas-signature{font-family:var(--type-latin-display);font-weight:500}
+
+/* Expanded selection uses the same dot-grid face as the exploration controls. */
+.studio.observatory-workspace .graph-host .selected .graph-label :is(strong,.node-kind,.mirror-relation-name,small){font-family:var(--type-explorer);font-weight:400}
+.studio.observatory-workspace .graph-host .graph-label{transform:translateX(-50%) scale(var(--label-text-scale,var(--label-scale,1)))}
