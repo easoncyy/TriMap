@@ -1,3 +1,4 @@
+@font-face{font-family:"Lemi Yueying Song";src:url("/optical/type/lemi-yueying-song.ttf") format("truetype");font-style:normal;font-weight:400;font-display:swap}
 @font-face{font-family:"Spectrum Graph Labels";src:url("/optical/type/spectrum-graph-labels.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
 /* Role tokens apply to the observatory, its dialogs, and their native controls. */
 :root{
@@ -8,7 +9,7 @@
  --type-editorial:"Observatory Editorial","Songti SC","Noto Serif CJK SC",serif;
  --type-ui:var(--type-latin-ui);
  --type-body:var(--type-ui);
- --type-graph:"IBM Plex Sans SC",var(--type-ui);
+ --type-graph:"Lemi Yueying Song","IBM Plex Sans SC",var(--type-ui);
  --type-explorer:"Spectrum Graph Labels",var(--type-ui);
  --type-glitch-ui:"Spectrum Glitch Sans",var(--type-ui);
  --type-glitch-display:"Spectrum Glitch Serif",var(--type-display);

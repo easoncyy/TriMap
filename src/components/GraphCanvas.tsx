@@ -9,6 +9,7 @@ import {locateCamera,restoreCamera,type CameraSnapshot,type RevealRequest} from 
 import {placeLabelWithin,type Box,type Segment} from '@/lib/label-placement';
 import {ReactFlow,Controls,ControlButton,useNodesState,type Viewport,type ReactFlowProps,type ReactFlowInstance,type Node,type NodeChange} from '@xyflow/react';
 
+import {labelScale,zoomAround,zoomStop} from '@/lib/graph-zoom';
 import {wrapOrbit,fullTurn,projectOrbit,opticalOffset} from '@/lib/orbit';
 import {mirrorAngle,type Point} from '@/lib/optics';
 import {bindOrbitInput} from './orbit-input';
@@ -17,9 +18,6 @@ type Props=ReactFlowProps&{active?:boolean;orbitAngle?:number;onOrbitCommit?:(an
 // Keep the cloud legible in fitted, sparse maps without obscuring close-up nodes.
 // Only its visual scale is normalized; pointer position remains synchronous.
 const cursorCloudScale=(zoom:number)=>Math.max(.28,Math.min(.72,.7*Math.sqrt(Math.max(0,zoom))));
-// Moderate overview scaling: text stays between 80% and 100% of its role size.
-const labelScreenScale=(zoom:number)=>Math.max(.8,Math.min(1,Math.pow(Math.max(.001,zoom)/.4,.12)));
-const labelTransformScale=(zoom:number)=>labelScreenScale(zoom)/zoom;
 /** React Flow owns geometry. Labels/leaders are disposable screen-space presentation. */
 export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,onOrbitCommit,fitScope,reveal,onRevealHandled,onViewChange,...props}:Props){
  const [nodes,setNodes,onNodesChange]=useNodesState(incoming);
@@ -36,6 +34,40 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  const pendingReveal=useRef(reveal);pendingReveal.current=reveal;
  const viewCallback=useRef(onViewChange);viewCallback.current=onViewChange;
  function publishView(){const host=container.current;if(host&&instance)viewCallback.current?.({viewport:instance.getViewport(),width:host.clientWidth,height:host.clientHeight});}
+ const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const minZoom=props.minZoom??.02,maxZoom=props.maxZoom??1.8;
+ const snapFrame=useRef(0),snapTarget=useRef<number|null>(null);
+ const pinchPoint=useRef<{x:number;y:number}|null>(null);
+ const startZoom=useRef(1),pinching=useRef(false);
+ function stopSnap(){
+  cancelAnimationFrame(snapFrame.current);
+  if(snapTarget.current!==null)settleCamera();
+  snapTarget.current=null;
+  pinchPoint.current=null;
+ }
+ function moveToStop(point:{x:number;y:number},direction:-1|0|1=0){
+  if(!instance)return;
+  const view=instance.getViewport();
+  const target=zoomStop(direction?(snapTarget.current??view.zoom):view.zoom,minZoom,maxZoom,direction);
+  stopSnap();
+  if(Math.abs(target-view.zoom)<1e-8)return;
+  autoFit.current=false;
+  const apply=(zoom:number)=>{void instance.setViewport(zoomAround(view,zoom,point));};
+  if(reduced()){apply(target);return;}
+  snapTarget.current=target;
+  const start=performance.now();
+  function tick(now:number){
+   const t=Math.max(0,Math.min(1,(now-start)/120));
+   apply(t===1?target:view.zoom*(target/view.zoom)**(1-(1-t)**3));
+   if(t<1)snapFrame.current=requestAnimationFrame(tick);
+   else snapTarget.current=null;
+  }
+  snapFrame.current=requestAnimationFrame(tick);
+ }
+ function stepZoom(direction:-1|1){
+  const host=container.current;
+  if(host)moveToStop({x:host.clientWidth/2,y:host.clientHeight/2},direction);
+ }
  const canceledDrag=useRef<string|null>(null),originalPosition=useRef<Point|null>(null);
  const orbitEnabled=orbitAngle!==undefined;
  const [angle,setAngle]=useState(orbitAngle??0);
@@ -74,6 +106,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  }
  function beginTurn(){
   if(turning.current)return;
+  stopSnap();inCameraMotion.current=false;
   turning.current=true;autoFit.current=false;
   if(container.current)container.current.dataset.turning='true';
  }
@@ -99,10 +132,16 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
    canceledDrag.current=id;dragging.current=null;
    setNodes(ns=>ns.map(n=>n.id===id?{...n,position,dragging:false}:n));
   };
-  const unbind=bindOrbitInput(container.current,instance,props.minZoom??.02,props.maxZoom??1.8,turn,finishTurn,()=>{autoFit.current=false;},interruptDrag);
-  return ()=>{unbind();clearTimeout(sliderTimer.current);cancelAnimationFrame(orbitFrame.current);orbitFrame.current=0;};
- },[active,instance,props.minZoom,props.maxZoom,orbitEnabled]);
- const reduced=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const unbind=bindOrbitInput(container.current,instance,minZoom,maxZoom,turn,finishTurn,
+   ()=>{pinching.current=true;autoFit.current=false;},
+   ()=>{stopSnap();interruptDrag();},
+   (point,snap)=>{
+    pinching.current=false;
+    if(snap)moveToStop(point);
+    if(snapTarget.current===null){settleCamera();publishView();}
+   });
+  return ()=>{unbind();stopSnap();clearTimeout(sliderTimer.current);cancelAnimationFrame(orbitFrame.current);orbitFrame.current=0;pinching.current=false;};
+ },[active,instance,minZoom,maxZoom,orbitEnabled]);
  const latestDraw=useRef(()=>{});
  // Hover changes the glass illumination only. Reprioritizing collision placement
  // under the pointer moves its own hit target and can create an enter/leave loop.
@@ -135,7 +174,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
   // Use the same continuous text scale during camera travel and settled placement.
   // Only labels that were placed at the last settled view need tracking.
   if(trackedZoom.current!==view.zoom){
-   const transform=`translateX(-50%) scale(${labelTransformScale(view.zoom)})`;
+   const transform=`translateX(-50%) scale(${labelScale(view.zoom)})`;
    for(const label of visibleLabels.current)label.style.transform=transform;
    trackedZoom.current=view.zoom;
   }
@@ -171,7 +210,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
    if(leaders.current)leaders.current.style.transform='';
    host.classList.remove('beyond-glass','dragging-object','camera-travel');
    host.style.setProperty('--label-scale',String(1/zoom));
-   host.style.setProperty('--label-text-scale',String(labelTransformScale(zoom)));
+   host.style.setProperty('--label-text-scale',String(labelScale(zoom)));
    host.dataset.overview=String(zoom<.4);host.dataset.detail=String(zoom>=.65);
    host.querySelectorAll<HTMLElement>('.react-flow__node').forEach(owner=>{owner.dataset.labelPriority=String(owner.classList.contains('selected'));});
    const labels=Array.from(host.querySelectorAll<HTMLElement>('.graph-label'));
@@ -305,7 +344,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  },[]);
  function fitAll(){
   if(!instance)return;
-  autoFit.current=true;
+  stopSnap();autoFit.current=true;
   // The former .25 minimum cropped the graph before fitView could fit it.
   void instance.fitView({padding:.2,minZoom:.02,maxZoom:1,duration:0}).then(arrangeLabels);
  }
@@ -361,7 +400,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  useEffect(()=>{if(instance&&fitted.current&&!pendingReveal.current)fitAll();},[fitScope,instance]);
  useEffect(()=>{
   if(!instance||!reveal||lastReveal.current===reveal.epoch||!nodes.some(n=>n.id===reveal.id&&n.measured?.width))return;
-  autoFit.current=false;
+  stopSnap();autoFit.current=false;
   let frame=0;
   // Let the reading/explorer layout and ResizeObserver settle before locating the target.
   frame=requestAnimationFrame(()=>{frame=requestAnimationFrame(()=>{
@@ -381,11 +420,36 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
   });});
   return()=>cancelAnimationFrame(frame);
  },[instance,reveal,nodes]);
- return <div className="graph-host" inert={!active} data-orbit-degrees={Math.round(angle*360/fullTurn)} data-dense={incoming.filter(n=>n.type==='spectral').length>14} data-sky-paused={skyPaused} ref={container} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;followHover(id);}} onMouseLeave={()=>followHover(null)} onBlur={()=>followHover(null)} onFocus={event=>{followHover((event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null);}}>
+ return <div className="graph-host" inert={!active} data-orbit-degrees={Math.round(angle*360/fullTurn)} data-dense={incoming.filter(n=>n.type==='spectral').length>14} data-sky-paused={skyPaused} ref={container} onPointerDownCapture={event=>{if((event.target as Element).closest('.react-flow__renderer'))stopSnap();}} onMouseOver={event=>{const id=(event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null;followHover(id);}} onMouseLeave={()=>followHover(null)} onBlur={()=>followHover(null)} onFocus={event=>{followHover((event.target as Element).closest<HTMLElement>('.react-flow__node')?.dataset.id||null);}}>
   <div className="sky-depth" aria-hidden="true"><i className="gas gas-far"/></div>
   <div className="cursor-bloom" aria-hidden="true"><span className="cursor-dust" ref={cloudSize}><i className="nebula-wake"/><i className="cloud-swirl"/></span></div>
-  <ReactFlow {...props} fitView={false} onMoveEnd={(event,viewport)=>{settleCamera();publishView();props.onMoveEnd?.(event,viewport);}} onMoveStart={(event,viewport)=>{if(cameraSettle.current)clearTimeout(cameraSettle.current);inCameraMotion.current=true;if(event)autoFit.current=false;props.onMoveStart?.(event,viewport);}} onMove={(event,viewport)=>{inCameraMotion.current=true;followCamera(viewport);props.onMove?.(event,viewport);}} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{canceledDrag.current=null;originalPosition.current=nodes.find(n=>n.id===node.id)?.position??null;dragging.current=node.id;container.current?.classList.add('dragging-object');autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{if(node.id===canceledDrag.current)return;const original=(n:Node)=>({...n,position:layoutPoint(n.id,n.type,n.position)});props.onNodeDragStop?.(event,original(node),items.map(original));dragging.current=null;arrangeLabels();}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={projected} onNodesChange={changeNodes}>
-   {props.children}<PlanetaryOrbits nodes={nodes}/><Controls showZoom={false} showInteractive={false} onFitView={fitAll}><ControlButton aria-label="Zoom In" onClick={()=>{autoFit.current=false;void instance?.zoomIn({duration:reduced()?0:180});}}><Plus/></ControlButton><ControlButton aria-label="Zoom Out" onClick={()=>{autoFit.current=false;void instance?.zoomOut({duration:reduced()?0:180});}}><Minus/></ControlButton><ControlButton className="sky-control" aria-label="暂停星云与环绕星光" aria-pressed={skyPaused} title="暂停或继续星云与环绕星光" onClick={()=>{const value=!skyPaused;setSkyPaused(value);try{localStorage.setItem('trimap-optical-sky',value?'paused':'running');}catch{}}}>{skyPaused?<Play/>:<Pause/>}</ControlButton></Controls>
+  <ReactFlow {...props} fitView={false} onMoveStart={(event,view)=>{
+   if(cameraSettle.current)clearTimeout(cameraSettle.current);
+   inCameraMotion.current=true;
+   if(event){stopSnap();startZoom.current=view.zoom;autoFit.current=false;}
+   props.onMoveStart?.(event,view);
+  }} onMove={(event,view)=>{
+   inCameraMotion.current=true;
+   if(event instanceof WheelEvent)pinchPoint.current={x:event.clientX,y:event.clientY};
+   else if(event && 'touches' in event){
+    if(event.touches.length===2){
+     const [a,b]=Array.from(event.touches);
+     pinchPoint.current={x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};
+    }else if(event.touches.length===1 && pinchPoint.current){
+     pinchPoint.current={x:event.touches[0].clientX,y:event.touches[0].clientY};
+    }
+   }
+   followCamera(view);props.onMove?.(event,view);
+  }} onMoveEnd={(event,view)=>{
+   const point=pinchPoint.current,host=container.current;
+   if(event && point && host && Math.abs(view.zoom-startZoom.current)>1e-8){
+    const bounds=host.getBoundingClientRect();
+    moveToStop({x:point.x-bounds.left,y:point.y-bounds.top});
+   }
+   if(!pinching.current && snapTarget.current===null){settleCamera();publishView();}
+   props.onMoveEnd?.(event,view);
+  }} multiSelectionKeyCode={null} selectionKeyCode={null} selectionOnDrag={false} onNodeDragStart={(event,node,items)=>{canceledDrag.current=null;originalPosition.current=nodes.find(n=>n.id===node.id)?.position??null;dragging.current=node.id;container.current?.classList.add('dragging-object');autoFit.current=false;setNodes(ns=>ns.map(n=>({...n,selected:n.id===node.id})));props.onNodeDragStart?.(event,node,items);}} onNodeDragStop={(event,node,items)=>{if(node.id===canceledDrag.current)return;const original=(n:Node)=>({...n,position:layoutPoint(n.id,n.type,n.position)});props.onNodeDragStop?.(event,original(node),items.map(original));dragging.current=null;arrangeLabels();}} onInit={flow=>{setInstance(flow);props.onInit?.(flow);}} nodes={projected} onNodesChange={changeNodes}>
+   {props.children}<PlanetaryOrbits nodes={nodes}/><Controls showZoom={false} showInteractive={false} onFitView={fitAll}><ControlButton aria-label="Zoom In" onClick={()=>stepZoom(1)}><Plus/></ControlButton><ControlButton aria-label="Zoom Out" onClick={()=>stepZoom(-1)}><Minus/></ControlButton><ControlButton className="sky-control" aria-label="暂停星云与环绕星光" aria-pressed={skyPaused} title="暂停或继续星云与环绕星光" onClick={()=>{const value=!skyPaused;setSkyPaused(value);try{localStorage.setItem('trimap-optical-sky',value?'paused':'running');}catch{}}}>{skyPaused?<Play/>:<Pause/>}</ControlButton></Controls>
   </ReactFlow>
   {orbitEnabled&&<label className="orbit-control" title="触控板双指横滑或拧转；触屏双指旋转">
    <span>星环</span><input type="range" aria-label="星环旋转角度" min={0} max={360} step={1} value={Math.round(angle*360/fullTurn)} onPointerUp={finishTurn} onKeyUp={finishTurn} onBlur={finishTurn} onChange={event=>{
