@@ -1,2 +1,2 @@
-import Atlas from '@/components/Atlas';
-export default function Page(){return <Atlas/>;}
+import GalaxyGateway from '@/components/GalaxyGateway';
+export default function Page(){return <GalaxyGateway/>;}
