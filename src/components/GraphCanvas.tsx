@@ -29,7 +29,6 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  const dragging=useRef<string|null>(null),hovered=useRef<string|null>(null);
  const labelFrame=useRef(0),fitted=useRef(false),autoFit=useRef(true);
  const lastReveal=useRef<number|null>(null);
- const labelOffsets=useRef(new WeakMap<HTMLElement,{x:number;y:number}>());
  const rayEndpoints=useRef(new WeakMap<SVGPathElement,{d:string;a:DOMPoint;b:DOMPoint}>());
  const pendingReveal=useRef(reveal);pendingReveal.current=reveal;
  const viewCallback=useRef(onViewChange);viewCallback.current=onViewChange;
@@ -214,8 +213,8 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
    host.dataset.overview=String(zoom<.4);host.dataset.detail=String(zoom>=.65);
    host.querySelectorAll<HTMLElement>('.react-flow__node').forEach(owner=>{owner.dataset.labelPriority=String(owner.classList.contains('selected'));});
    const labels=Array.from(host.querySelectorAll<HTMLElement>('.graph-label'));
-   // Hidden labels still have geometry. Undo the previous world-space offset in math,
-   // so measuring a settled camera never toggles visibility across the whole graph.
+   // Measure every label at its native anchor, independent of the previous camera.
+   for(const label of labels)label.style.removeProperty('translate');
    const outer=host.getBoundingClientRect();
    canvasSize.current={width:outer.width,height:outer.height};
    const rect=(el:Element):Box=>{const r=el.getBoundingClientRect();return {x:r.x-outer.x,y:r.y-outer.y,width:r.width,height:r.height};};
@@ -236,8 +235,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
     const owner=el.closest<HTMLElement>('.react-flow__node')!;
     const shape=owner.querySelector('.prism-shape,.mirror-shape')!;
     const priority=owner.dataset.labelPriority==='true';
-    const box=rect(el),offset=labelOffsets.current.get(el);
-    if(offset){box.x-=offset.x*zoom;box.y-=offset.y*zoom;}
+    const box=rect(el);
     // WebKit rounds transformed DOMRects; remove subpixel noise before the
     // discrete placement search chooses which side of a neighbouring label to use.
     box.x=Math.round(box.x*16)/16;box.y=Math.round(box.y*16)/16;
@@ -278,25 +276,25 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
    if(turning.current)return;
    const obstacles=measured.map(item=>item.shape).concat(controlBoxes);
    const peerShapes=[measured.filter(item=>!item.mirror).map(item=>item.shape),measured.filter(item=>item.mirror).map(item=>item.shape)];
-   const labelObstacles:Box[]=[];
+
    let hidden=0;const leaderLines:Array<Segment&{owner:string;priority:boolean}>=[];
    const placed=measured.map(item=>{
     const {box,shape,priority}=item;
     const onScreen=shape.x+shape.width>=0&&shape.y+shape.height>=0&&shape.x<=outer.width&&shape.y<=outer.height;
     const eligible=onScreen&&(!item.mirror||zoom>=.4||priority||item.path);
     // Start below the visible glass, even when its apparent size is compensated for zoom.
-    const anchor=item.mirror?box:{...box,x:shape.x+(shape.width-box.width)/2,y:shape.y+shape.height*.91+3};
-    let result=eligible?placeLabelWithin(anchor,obstacles,lines,bounds,priority?112:zoom<.4?64:96,{owner:shape,peers:peerShapes[Number(item.mirror)]}):null;
+    const anchor={...box,x:shape.x+(shape.width-box.width)/2,y:shape.y+shape.height+6};
+    let result=eligible?placeLabelWithin(anchor,obstacles,lines,bounds,0,{owner:shape,peers:peerShapes[Number(item.mirror)]}):null;
     // Near the bottom edge, a label below its prism can hit the overview note.
     // Try the other side of the same prism before treating its title as optional.
-    if(eligible&&!item.mirror&&!result){
+    if(eligible&&!result){
      const above={...box,x:shape.x+(shape.width-box.width)/2,y:shape.y-box.height-8};
-     result=placeLabelWithin(above,obstacles,lines,bounds,64,{owner:shape,peers:peerShapes[0]});
+     result=placeLabelWithin(above,obstacles,lines,bounds,0,{owner:shape,peers:peerShapes[0]});
     }
     // Selected/focused text wins over the optional labels, never over the zoom controls.
-    if(eligible&&priority&&!result)result=placeLabelWithin(box,[shape,...labelObstacles,...controlBoxes],lines,bounds,112);
+    if(eligible&&priority&&!result)result=placeLabelWithin(anchor,controlBoxes,[],bounds,0);
     if(!result){if(onScreen)hidden++;return {...item,result:null};}
-    obstacles.push(result);labelObstacles.push(result);
+    obstacles.push(result);
     if(Math.hypot(result.x-box.x,result.y-box.y)>12||priority){
      const a={x:shape.x+shape.width/2,y:shape.y+shape.height/2};
      const b={x:Math.max(result.x,Math.min(a.x,result.x+result.width)),y:Math.max(result.y,Math.min(a.y,result.y+result.height))};
@@ -310,9 +308,8 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
    placed.forEach(({el,box,result})=>{
     el.style.visibility=result?'visible':'hidden';
     el.dataset.placed=String(!!result);
-    if(!result){labelOffsets.current.delete(el);el.style.removeProperty('translate');return;}
+    if(!result){el.style.removeProperty('translate');return;}
     const x=(result.x-box.x)/zoom,y=(result.y-box.y)/zoom;
-    labelOffsets.current.set(el,{x,y});
     el.style.translate=`${x}px ${y}px`;
    });
    if(leaders.current){
@@ -333,6 +330,7 @@ export default function GraphCanvas({nodes:incoming=[],active=true,orbitAngle,on
  useEffect(()=>{
   const host=container.current;
   if(!host)return;
+  if(matchMedia('(pointer: coarse)').matches){arrangeLabels();return;}
   const canvas=document.createElement('canvas');
   canvas.className='prism-surface';
   canvas.setAttribute('aria-hidden','true');

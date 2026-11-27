@@ -329,3 +329,4 @@ body:has(#library[open]) {overflow:hidden;}
 .graph-host .orbit-control input{width:76px;min-height:42px;margin:0;accent-color:var(--lens)}
 .graph-host .orbit-control output{min-width:4ch;text-align:right;font-variant-numeric:tabular-nums}
 .graph-host[data-turning=true] .label-leaders{visibility:hidden}
+@media (pointer: coarse){.studio.observatory-workspace .graph-host::after,.graph-host .sky-depth,.graph-host .cursor-bloom,.graph-host .facet-sheen{display:none}}
